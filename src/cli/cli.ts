@@ -10,10 +10,16 @@
  *   openclaw emotion reset [--dimensions <names>]
  *   openclaw emotion history [--limit <n>]
  *   openclaw emotion decay --dimension <name> --rate <n>
+ *   openclaw emotion configure   Interactive wizard (presets or custom)
  */
 
+import { createRequire } from "node:module";
 import type { Command } from "commander";
 import type { OCEANTrait, DimensionName } from "../types.js";
+
+const require = createRequire(import.meta.url);
+const OPENFEELZ_VERSION: string =
+  (require("../../package.json") as { version?: string }).version ?? "0.0.0";
 import { DEFAULT_CONFIG } from "../types.js";
 import { DIMENSION_NAMES, OCEAN_TRAITS } from "../types.js";
 import {
@@ -42,10 +48,31 @@ export function registerEmotionCli({
 }: CliParams): void {
   const root = program
     .command("emotion")
-    .description("OpenFeelz utilities")
-    .option("--agent <id>", "Agent ID", "main");
+    .description("OpenFeelz utilities (personality, emotion state, configure wizard)")
+    .version(OPENFEELZ_VERSION, "-V, --version", "output OpenFeelz version")
+    .option("--agent <id>", "Agent ID", "main")
+    .addHelpText("beforeAll", `OpenFeelz v${OPENFEELZ_VERSION}\n`);
 
   const agentOpts = () => (root.opts() as { agent?: string }).agent ?? "main";
+
+  // -----------------------------------------------------------------------
+  // configure (list first so it appears at top of help)
+  // -----------------------------------------------------------------------
+
+  root
+    .command("configure")
+    .description("Interactive configuration wizard (presets or custom)")
+    .option("--agent <id>", "Agent ID", "main")
+    .action(async (opts: { agent?: string }) => {
+      const agentId = opts.agent ?? agentOpts();
+      await runConfigureWizard({
+        getManager,
+        agentId,
+        pluginConfig: config,
+        openclawConfig,
+        workspaceDir,
+      });
+    });
 
   // -----------------------------------------------------------------------
   // status
@@ -270,24 +297,6 @@ export function registerEmotionCli({
       console.log(`Set ${opts.dimension} decay rate to ${opts.rate}/hr`);
     });
 
-  // -----------------------------------------------------------------------
-  // configure
-  // -----------------------------------------------------------------------
-
-  root
-    .command("configure")
-    .description("Interactive configuration wizard")
-    .option("--agent <id>", "Agent ID", "main")
-    .action(async (opts: { agent?: string }) => {
-      const agentId = opts.agent ?? agentOpts();
-      await runConfigureWizard({
-        getManager,
-        agentId,
-        pluginConfig: config,
-        openclawConfig,
-        workspaceDir,
-      });
-    });
 }
 
 // ---------------------------------------------------------------------------

@@ -26,7 +26,7 @@ Most agents vibes-check each message independently and forget everything between
 - **LLM Classification** -- Automatically classify user/agent emotions via OpenAI-compatible models
 - **Web Dashboard** -- Glassmorphism UI at `/emotion-dashboard`
 - **MCP Server** -- Expose emotional state to Cursor, Claude Desktop, etc.
-- **CLI Tools** -- `openclaw emotion status`, `reset`, `personality`, `history`, `decay`
+- **CLI Tools** -- `openclaw emotion status`, `reset`, `personality`, `history`, `decay`, **`configure`** (interactive wizard)
 
 ## Installation
 
@@ -250,7 +250,36 @@ openclaw emotion reset               # Reset all to baseline
 openclaw emotion reset --dimensions pleasure,arousal
 openclaw emotion history --limit 20  # Recent stimuli
 openclaw emotion decay --dimension pleasure --rate 0.05
+openclaw emotion configure           # Interactive configuration wizard (see below)
 ```
+
+### Configuration wizard: `openclaw emotion configure`
+
+The **configuration wizard** is the CLI option for guided setup. It runs an interactive (TUI-style) flow where you can:
+
+- **a) Choose a preset** — Pick one of 10 famous-personality presets (OCEAN profiles based on biographical research). Each option is listed with a short explanation. The wizard applies that preset’s personality to your agent’s state.
+- **b) Customize** — Skip presets and go straight to custom settings, or after picking a preset you can optionally configure model, decay half-life, rumination, context injection, and dashboard.
+
+So: run **`openclaw emotion configure`** to open the wizard; it will ask whether you want a **preset** (with explanations) or **custom**, then optionally walk through key config fields with validation and help text.
+
+#### Default personalities in the picker
+
+The preset picker offers these 10 options (diverse across time, region, and domain; OCEAN values from biographical/psychological literature, see `docs/personality-presets-research.md`):
+
+| Preset | Description |
+|--------|-------------|
+| **Albert Einstein** | Theoretical physicist (Germany/US, 20th c.) — high openness & conscientiousness, introspective. |
+| **Marie Curie** | Physicist and chemist (Poland/France, 19th–20th c.) — perseverance, solitary focus. |
+| **Nelson Mandela** | Anti-apartheid leader, President of South Africa (20th c.) — high agreeableness & extraversion, emotional stability. |
+| **Wangari Maathai** | Environmentalist and Nobel Peace laureate (Kenya, 20th c.) — Green Belt Movement; visionary, resilient. |
+| **Frida Kahlo** | Painter (Mexico, 20th c.) — high openness and emotional intensity. |
+| **Confucius** | Philosopher and teacher (Ancient China) — high conscientiousness & agreeableness, emphasis on li and ren. |
+| **Simón Bolívar** | Liberator and revolutionary (South America, 19th c.) — visionary, charismatic; driven, mood swings. |
+| **Sitting Bull** | Lakota leader and resistance figure (Indigenous Americas, 19th c.) — steadfast, defiant sovereignty, calm under pressure. |
+| **Sejong the Great** | King and scholar, creator of Hangul (Korea, 15th c.) — scholarly, benevolent, humble. |
+| **Rabindranath Tagore** | Poet and philosopher, Nobel laureate (India, 20th c.) — very high openness and agreeableness. |
+
+Choosing a preset updates the agent’s OCEAN personality (and thus baselines and decay rates). You can still edit config manually or via the OpenClaw web UI.
 
 ## Dashboard
 
