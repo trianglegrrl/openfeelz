@@ -335,3 +335,7 @@ Issues, PRs, and questions are all welcome. If you want to poke around the model
 ## License
 
 [MIT](LICENSE)
+
+---
+
+Made with ❤️ by [@trianglegrrl](https://github.com/trianglegrrl) for the OpenClaw community 🦞
