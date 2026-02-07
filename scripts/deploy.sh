@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Deploy OpenFeelz to ellie@localhost with backups and doctor checks.
+# Deploy OpenFeelz to a remote OpenClaw instance.
+# Set REMOTE env var to your SSH target (default: localhost).
 # Run from the OpenFeelz source directory or pass path as first arg.
 
 set -euo pipefail
 
-REMOTE="${REMOTE:-ellie@localhost}"
+REMOTE="${REMOTE:-localhost}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PLUGIN_PATH="${1:-$REPO_DIR}"
@@ -26,7 +27,7 @@ sleep 2
 echo "Done."
 echo ""
 
-# 3. SCP plugin source
+# 3. Copy plugin source
 echo "[3/8] Copying plugin source to $REMOTE..."
 rsync -avz --exclude node_modules --exclude dist --exclude .git \
   "$PLUGIN_PATH/" "$REMOTE:~/openfeelz/"
@@ -58,7 +59,6 @@ echo ""
 # 8. Enable plugin and start gateway
 echo "[8/8] Enabling plugin and starting gateway..."
 ssh "$REMOTE" 'openclaw plugins enable openfeelz && openclaw gateway restart'
-ssh "$REMOTE" 'openclaw gateway restart'
 echo "Done."
 echo ""
 

@@ -1,39 +1,37 @@
-# Deployment Log
+# Deployment Guide
 
-This document records every step taken to deploy the openfeelz plugin
-to a live OpenClaw instance.
+How to deploy the OpenFeelz plugin to a remote OpenClaw instance.
 
 ## Prerequisites
 
-- Remote OpenClaw instance accessible via SSH (e.g. `ellie@localhost`)
-- Plugin source at `workspace/source/openfeelz/`
-- `jq` on target for scripted tests
+- Remote OpenClaw instance accessible via SSH
+- Plugin source at hand (clone or local copy)
+- `jq` on target for scripted smoke tests
 
-## Automated Deploy (Recommended)
+## Automated Deploy
 
 Run from the OpenFeelz source directory:
 
 ```bash
-./scripts/deploy-to-ellie.sh
+REMOTE=user@host ./scripts/deploy.sh
 ```
 
-This script:
+Set `REMOTE` to your SSH target (defaults to `localhost`). The script:
 
 1. Backs up `~/.openclaw/openclaw.json` to `~/.openclaw-backups/`
 2. Stops the OpenClaw gateway
-3. Runs `openclaw doctor`
-4. Runs `openclaw doctor --fix`
-5. Copies plugin source via rsync (excludes node_modules, dist, .git)
-6. Installs dependencies and builds on remote
-7. Installs plugin: `openclaw plugins install ~/openfeelz`
-8. Enables plugin and restarts gateway
+3. Copies plugin source via rsync (excludes node_modules, dist, .git)
+4. Installs dependencies and builds on remote
+5. Copies plugin into `~/.openclaw/extensions/openfeelz/`
+6. Runs `openclaw doctor` and `openclaw doctor --fix`
+7. Enables plugin and restarts gateway
 
-## Scripted Smoke Tests
+## Smoke Tests
 
 After deployment, run the smoke tests on the target:
 
 ```bash
-ssh ellie@localhost 'cd ~/openfeelz && chmod +x scripts/smoke-test.sh && ./scripts/smoke-test.sh'
+ssh user@host 'cd ~/openfeelz && chmod +x scripts/smoke-test.sh && ./scripts/smoke-test.sh'
 ```
 
 Tests:
@@ -50,41 +48,34 @@ Tests:
 ### 1. Backup config
 
 ```bash
-ssh ellie@localhost 'mkdir -p ~/.openclaw-backups && cp -a ~/.openclaw/openclaw.json ~/.openclaw-backups/openclaw.json.$(date +%Y%m%d-%H%M%S)'
+ssh user@host 'mkdir -p ~/.openclaw-backups && cp -a ~/.openclaw/openclaw.json ~/.openclaw-backups/openclaw.json.$(date +%Y%m%d-%H%M%S)'
 ```
 
 ### 2. Stop gateway
 
 ```bash
-ssh ellie@localhost 'openclaw gateway stop'
+ssh user@host 'openclaw gateway stop'
 ```
 
-### 3. Run doctor
-
-```bash
-ssh ellie@localhost 'openclaw doctor'
-ssh ellie@localhost 'openclaw doctor --fix'
-```
-
-### 4. Copy and install plugin
+### 3. Copy and install plugin
 
 ```bash
 rsync -avz --exclude node_modules --exclude dist --exclude .git \
-  . ellie@localhost:~/openfeelz/
-ssh ellie@localhost 'cd ~/openfeelz && npm install && npm run build'
-ssh ellie@localhost 'openclaw plugins install ~/openfeelz && openclaw plugins enable openfeelz'
+  . user@host:~/openfeelz/
+ssh user@host 'cd ~/openfeelz && npm install && npm run build'
+ssh user@host 'mkdir -p ~/.openclaw/extensions && rm -rf ~/.openclaw/extensions/openfeelz && cp -a ~/openfeelz ~/.openclaw/extensions/openfeelz'
 ```
 
-### 5. Restart gateway
+### 4. Enable and restart
 
 ```bash
-ssh ellie@localhost 'openclaw gateway restart'
+ssh user@host 'openclaw plugins enable openfeelz && openclaw gateway restart'
 ```
 
-### 6. Verify
+### 5. Verify
 
 ```bash
-ssh ellie@localhost 'openclaw emotion status'
-ssh ellie@localhost 'openclaw emotion context'
-ssh ellie@localhost 'openclaw emotion status --json'
+ssh user@host 'openclaw emotion status'
+ssh user@host 'openclaw emotion context'
+ssh user@host 'openclaw emotion status --json'
 ```

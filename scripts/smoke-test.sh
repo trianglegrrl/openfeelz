@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Scripted smoke tests for OpenFeelz on a live OpenClaw instance.
-# Run on the target machine after deployment (e.g. ssh ellie@localhost 'cd ~/openfeelz && ./scripts/smoke-test.sh').
+# Run on the target machine after deployment (e.g. ssh user@host 'cd ~/openfeelz && ./scripts/smoke-test.sh').
 #
 # Uses EMOTION_HALF_LIFE_HOURS=0.001 (~3.6 sec) for fast decay tests.
 
