@@ -86,8 +86,8 @@ describe("hooks", () => {
       expect(updatedState.dimensions.pleasure).toBeLessThan(0.85);
     });
 
-    it("respects promptInjectionEnabled=false", async () => {
-      const config = { ...DEFAULT_CONFIG, promptInjectionEnabled: false };
+    it("respects contextEnabled=false", async () => {
+      const config = { ...DEFAULT_CONFIG, contextEnabled: false };
       let state = await manager.getState();
       state = manager.updateUserEmotion(state, "user1", {
         label: "happy",

@@ -40,7 +40,7 @@ function resolveConfig(raw?: Record<string, unknown>): EmotionEngineConfig {
     ruminationThreshold: (raw?.ruminationThreshold as number) ?? DEFAULT_CONFIG.ruminationThreshold,
     ruminationMaxStages: (raw?.ruminationMaxStages as number) ?? DEFAULT_CONFIG.ruminationMaxStages,
     realtimeClassification: (raw?.realtimeClassification as boolean) ?? DEFAULT_CONFIG.realtimeClassification,
-    promptInjectionEnabled: (raw?.promptInjectionEnabled as boolean) ?? DEFAULT_CONFIG.promptInjectionEnabled,
+    contextEnabled: (raw?.contextEnabled as boolean) ?? DEFAULT_CONFIG.contextEnabled,
     decayServiceEnabled: (raw?.decayServiceEnabled as boolean) ?? DEFAULT_CONFIG.decayServiceEnabled,
     decayServiceIntervalMinutes: (raw?.decayServiceIntervalMinutes as number) ?? DEFAULT_CONFIG.decayServiceIntervalMinutes,
     dashboardEnabled: (raw?.dashboardEnabled as boolean) ?? DEFAULT_CONFIG.dashboardEnabled,

@@ -260,7 +260,7 @@ export interface EmotionEngineConfig {
   ruminationThreshold: number;
   ruminationMaxStages: number;
   realtimeClassification: boolean;
-  promptInjectionEnabled: boolean;
+  contextEnabled: boolean;
   decayServiceEnabled: boolean;
   decayServiceIntervalMinutes: number;
   dashboardEnabled: boolean;
@@ -284,7 +284,7 @@ export const DEFAULT_CONFIG: EmotionEngineConfig = {
   ruminationThreshold: 0.7,
   ruminationMaxStages: 4,
   realtimeClassification: false,
-  promptInjectionEnabled: true,
+  contextEnabled: true,
   decayServiceEnabled: false,
   decayServiceIntervalMinutes: 30,
   dashboardEnabled: true,

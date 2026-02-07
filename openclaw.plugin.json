@@ -49,9 +49,9 @@
       "help": "Classify emotions on every message (not just at session end)",
       "advanced": true
     },
-    "promptInjectionEnabled": {
-      "label": "Inject Emotions into Prompt",
-      "help": "Add emotional context to the agent system prompt"
+    "contextEnabled": {
+      "label": "Enable Emotion Context",
+      "help": "Prepend emotional context to the agent system prompt at each turn"
     },
     "decayServiceEnabled": {
       "label": "Background Decay Service",
@@ -129,7 +129,7 @@
       "ruminationThreshold": { "type": "number", "minimum": 0, "maximum": 1 },
       "ruminationMaxStages": { "type": "integer", "minimum": 1, "maximum": 10 },
       "realtimeClassification": { "type": "boolean" },
-      "promptInjectionEnabled": { "type": "boolean" },
+      "contextEnabled": { "type": "boolean" },
       "decayServiceEnabled": { "type": "boolean" },
       "decayServiceIntervalMinutes": { "type": "number", "minimum": 1 },
       "dashboardEnabled": { "type": "boolean" },

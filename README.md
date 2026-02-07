@@ -105,7 +105,7 @@ The block only appears when there is something to show. If the agent has no emot
 
 ### When Injection Is Disabled
 
-Set `promptInjectionEnabled: false` in your config to stop the block from being injected. The rest of the system (classification, decay, the tool, the dashboard) still works -- the agent just will not see the emotional context in its prompt.
+Set `contextEnabled: false` in your config to stop the block from being prepended. The rest of the system (classification, decay, the tool, the dashboard) still works -- the agent just will not see the emotional context in its prompt.
 
 ## How Decay Works
 
@@ -253,7 +253,7 @@ All settings are also configurable via the OpenClaw web UI.
 | `ruminationThreshold` | number | `0.7` | Intensity threshold for rumination |
 | `ruminationMaxStages` | number | `4` | Max rumination stages |
 | `realtimeClassification` | boolean | `false` | Classify on every message |
-| `promptInjectionEnabled` | boolean | `true` | Inject context into prompt |
+| `contextEnabled` | boolean | `true` | Prepend emotion context to prompt |
 | `decayServiceEnabled` | boolean | `false` | Background decay service |
 | `decayServiceIntervalMinutes` | number | `30` | Decay service interval |
 | `dashboardEnabled` | boolean | `true` | Serve web dashboard |

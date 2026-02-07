@@ -1,7 +1,7 @@
 /**
  * Tests that verify the exact format of the emotional context block
- * injected into the agent's system prompt, and the end-to-end lifecycle
- * from stimulus through decay to prompt injection.
+ * prepended to the agent's system prompt, and the end-to-end lifecycle
+ * from stimulus through decay to context injection at bootstrap.
  */
 
 import fs from "node:fs/promises";
@@ -15,7 +15,7 @@ import { formatEmotionBlock } from "./prompt-formatter.js";
 import { buildEmptyState, writeStateFile } from "../state/state-file.js";
 import { decayTowardBaseline } from "../model/decay.js";
 
-describe("prompt injection lifecycle", () => {
+describe("context injection lifecycle", () => {
   let tmpDir: string;
   let statePath: string;
 

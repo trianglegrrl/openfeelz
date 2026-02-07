@@ -44,14 +44,14 @@ interface AgentEndEvent {
  * 3. Advance rumination (if active)
  * 4. Format emotional context
  * 5. Persist updated state
- * 6. Return prependContext for prompt injection
+ * 6. Return prependContext for emotional context prepend
  */
 export function createBootstrapHook(
   manager: StateManager,
   config: EmotionEngineConfig,
 ): (event: BootstrapEvent) => Promise<BootstrapResult | undefined> {
   return async (event) => {
-    if (!config.promptInjectionEnabled) return undefined;
+    if (!config.contextEnabled) return undefined;
 
     try {
       let state = await manager.getState();

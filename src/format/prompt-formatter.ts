@@ -1,5 +1,5 @@
 /**
- * Format emotional state for system prompt injection.
+ * Format emotional state for system prompt context injection.
  *
  * Produces an `<emotion_state>` XML block that gets prepended to the
  * agent's system prompt, giving it emotional context.
@@ -136,7 +136,7 @@ export interface FormatOptions {
 }
 
 /**
- * Build the `<emotion_state>` block for system prompt injection.
+ * Build the `<emotion_state>` block for system prompt context prepend.
  * Returns an empty string if there's nothing to inject.
  */
 export function formatEmotionBlock(
