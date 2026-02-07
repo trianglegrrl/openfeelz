@@ -21,7 +21,7 @@ describe("context injection lifecycle", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "emotion-inject-test-"));
-    statePath = path.join(tmpDir, "emotion-engine.json");
+    statePath = path.join(tmpDir, "openfeelz.json");
   });
 
   afterEach(async () => {
@@ -271,7 +271,7 @@ describe("context injection lifecycle", () => {
       await writeStateFile(statePath, { ...state, lastUpdated: sixHoursAgo });
 
       // 3. Bootstrap hook runs (simulating the agent waking up)
-      const hook = createBootstrapHook(manager, DEFAULT_CONFIG);
+      const hook = createBootstrapHook(() => manager, DEFAULT_CONFIG);
       const result = await hook({ prompt: "Hello", userKey: "alice", agentId: "main" });
 
       expect(result).toBeDefined();
@@ -318,7 +318,7 @@ describe("context injection lifecycle", () => {
       await manager.saveState(state);
 
       // Bootstrap should show trend as "mostly frustrated"
-      const hook = createBootstrapHook(manager, DEFAULT_CONFIG);
+      const hook = createBootstrapHook(() => manager, DEFAULT_CONFIG);
       const result = await hook({ prompt: "Hi", userKey: "bob", agentId: "main" });
 
       expect(result).toBeDefined();

@@ -1,5 +1,5 @@
 /**
- * Emotion Engine - OpenClaw Plugin Entry Point
+ * OpenFeelz - OpenClaw Plugin Entry Point
  *
  * Registers:
  *  - emotion_state tool (query/modify/reset/personality)
@@ -8,18 +8,22 @@
  *  - background service (optional periodic decay)
  *  - CLI commands (openclaw emotion ...)
  *  - HTTP dashboard route (/emotion-dashboard)
+ *
+ * State is stored per-agent in each agent's workspace:
+ *   {workspace}/openfeelz.json
  */
 
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import type { EmotionEngineConfig, OCEANProfile } from "./src/types.js";
 import { DEFAULT_CONFIG } from "./src/types.js";
 import { StateManager } from "./src/state/state-manager.js";
+import { resolveAgentDir, resolveAgentStatePath, listAgentIds } from "./src/paths.js";
 import { createEmotionTool } from "./src/tool/emotion-tool.js";
 import { createBootstrapHook, createAgentEndHook } from "./src/hook/hooks.js";
 import { registerEmotionCli } from "./src/cli/cli.js";
 import { createDashboardHandler } from "./src/http/dashboard.js";
+import { analyzePersonalityViaLLM, describeEmotionalStateViaLLM } from "./src/analysis/analyzer.js";
 
 /**
  * Resolve plugin configuration from raw pluginConfig + environment variables.
@@ -28,10 +32,23 @@ function resolveConfig(raw?: Record<string, unknown>): EmotionEngineConfig {
   const env = process.env;
   const personality = (raw?.personality ?? {}) as Partial<OCEANProfile>;
 
+  const apiKey = (raw?.apiKey as string) ?? env.ANTHROPIC_API_KEY ?? env.OPENAI_API_KEY ?? undefined;
+  const explicitModel = (raw?.model as string) ?? env.EMOTION_MODEL;
+  const hasAnthropicKey = !!(raw?.apiKey || env.ANTHROPIC_API_KEY);
+  const hasOpenAIKey = !!(raw?.apiKey || env.OPENAI_API_KEY);
+
+  let model = explicitModel ?? DEFAULT_CONFIG.model;
+  let baseUrl = (raw?.baseUrl as string) ?? env.OPENAI_BASE_URL ?? DEFAULT_CONFIG.baseUrl;
+
+  if (!explicitModel && hasOpenAIKey && !hasAnthropicKey) {
+    model = "gpt-5-mini";
+    baseUrl = baseUrl || "https://api.openai.com/v1";
+  }
+
   return {
-    apiKey: (raw?.apiKey as string) ?? env.ANTHROPIC_API_KEY ?? env.OPENAI_API_KEY ?? undefined,
-    baseUrl: (raw?.baseUrl as string) ?? env.OPENAI_BASE_URL ?? DEFAULT_CONFIG.baseUrl,
-    model: (raw?.model as string) ?? env.EMOTION_MODEL ?? DEFAULT_CONFIG.model,
+    apiKey,
+    baseUrl,
+    model,
     provider: (raw?.provider as "anthropic" | "openai" | undefined) ?? undefined,
     classifierUrl: (raw?.classifierUrl as string) ?? env.EMOTION_CLASSIFIER_URL ?? undefined,
     confidenceMin: (raw?.confidenceMin as number) ?? (Number(env.EMOTION_CONFIDENCE_MIN) || DEFAULT_CONFIG.confidenceMin),
@@ -65,12 +82,10 @@ function resolveConfig(raw?: Record<string, unknown>): EmotionEngineConfig {
  * Attempt to resolve an Anthropic API key from OpenClaw's auth-profiles.json.
  * Falls back gracefully if the file doesn't exist or has no Anthropic profile.
  */
-function resolveApiKeyFromAuthProfiles(api: any): string | undefined {
+function resolveApiKeyFromAuthProfiles(api: any, agentId = "main"): string | undefined {
   try {
-    const stateDir = api.resolvePath
-      ? api.resolvePath(".")
-      : path.join(os.homedir(), ".openclaw", "agents", "main", "agent");
-    const authFile = path.join(stateDir, "auth-profiles.json");
+    const agentDir = resolveAgentDir(api.config, agentId);
+    const authFile = path.join(agentDir, "auth-profiles.json");
     if (!fs.existsSync(authFile)) return undefined;
     const raw = JSON.parse(fs.readFileSync(authFile, "utf8"));
     const profiles = raw?.profiles ?? {};
@@ -86,8 +101,8 @@ function resolveApiKeyFromAuthProfiles(api: any): string | undefined {
 }
 
 const emotionEnginePlugin = {
-  id: "emotion-engine",
-  name: "Emotion Engine",
+  id: "openfeelz",
+  name: "OpenFeelz",
   description:
     "PAD + Ekman + OCEAN emotional model with personality-influenced decay, " +
     "rumination, and multi-agent awareness",
@@ -103,62 +118,126 @@ const emotionEnginePlugin = {
       }
     }
 
-    // Resolve state file path
-    const stateDir = api.resolvePath
-      ? api.resolvePath(".")
-      : path.join(os.homedir(), ".openclaw", "agents", "main", "agent");
-    const statePath = path.join(stateDir, "emotion-engine.json");
+    const cfg = api.config;
 
-    const manager = new StateManager(statePath, config);
+    // Per-agent StateManager cache (state path = workspace/openfeelz.json)
+    const managerCache = new Map<string, StateManager>();
+    const getManager = (agentId: string): StateManager => {
+      const id = agentId?.trim() || "main";
+      let m = managerCache.get(id);
+      if (!m) {
+        const statePath = resolveAgentStatePath(cfg, id);
+        m = new StateManager(statePath, config);
+        managerCache.set(id, m);
+      }
+      return m;
+    };
 
+    const defaultStatePath = resolveAgentStatePath(cfg, "main");
     api.logger?.info?.(
-      `emotion-engine: registered (state: ${statePath}, model: ${config.model}, provider: ${config.provider ?? "auto"})`,
+      `openfeelz: registered (state: ${defaultStatePath}, model: ${config.model}, provider: ${config.provider ?? "auto"})`,
     );
 
-    // -- Tool --
-    api.registerTool(createEmotionTool(manager), { name: "emotion_state" });
+    // -- Tool -- (uses main agent when agent context not available)
+    api.registerTool(createEmotionTool(getManager("main")), { name: "emotion_state" });
 
     // -- Hooks --
-    const bootstrapHandler = createBootstrapHook(manager, config);
+    const bootstrapHandler = createBootstrapHook(getManager, config, cfg);
     api.on("before_agent_start", async (event: any) => {
+      const agentId = event.agentId ?? "main";
       const result = await bootstrapHandler({
         prompt: event.prompt ?? "",
         userKey: event.senderId ?? event.sessionKey ?? "unknown",
-        agentId: event.agentId ?? "main",
+        agentId,
       });
       return result;
     });
 
-    const agentEndHandler = createAgentEndHook(manager, config);
+    const agentEndHandler = createAgentEndHook(getManager, config);
     api.on("agent_end", async (event: any) => {
+      const agentId = event.agentId ?? "main";
       await agentEndHandler({
         success: event.success ?? true,
         messages: event.messages ?? [],
         userKey: event.senderId ?? event.sessionKey ?? "unknown",
-        agentId: event.agentId ?? "main",
+        agentId,
       });
     });
+
+    // -- Service (background analysis: startup + every 30m) --
+    if (config.apiKey) {
+      let analysisIntervalHandle: ReturnType<typeof setInterval> | null = null;
+
+      const runAnalysis = async () => {
+        try {
+          for (const agentId of listAgentIds(cfg)) {
+            const manager = getManager(agentId);
+            const state = await manager.getState();
+            const opts = {
+              apiKey: config.apiKey!,
+              model: config.model,
+              provider: config.provider,
+              baseUrl: config.baseUrl,
+            };
+            const [personality, emotionalState] = await Promise.all([
+              analyzePersonalityViaLLM(state, opts),
+              describeEmotionalStateViaLLM(state, opts),
+            ]);
+            const now = new Date().toISOString();
+            const updated = {
+              ...state,
+              cachedAnalysis: {
+                personality: { ...personality, generatedAt: now },
+                emotionalState: { ...emotionalState, generatedAt: now },
+              },
+            };
+            await manager.saveState(updated);
+          }
+        } catch (err) {
+          api.logger?.error?.(`[openfeelz] Analysis service error: ${err}`);
+        }
+      };
+
+      api.registerService({
+        id: "openfeelz-analysis",
+        start: () => {
+          runAnalysis();
+          analysisIntervalHandle = setInterval(runAnalysis, 30 * 60_000);
+          api.logger?.info?.("openfeelz: analysis service started (interval: 30m)");
+        },
+        stop: () => {
+          if (analysisIntervalHandle) {
+            clearInterval(analysisIntervalHandle);
+            analysisIntervalHandle = null;
+          }
+          api.logger?.info?.("openfeelz: analysis service stopped");
+        },
+      });
+    }
 
     // -- Service (optional background decay) --
     if (config.decayServiceEnabled) {
       let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
       api.registerService({
-        id: "emotion-engine-decay",
+        id: "openfeelz-decay",
         start: () => {
           const ms = config.decayServiceIntervalMinutes * 60_000;
           intervalHandle = setInterval(async () => {
             try {
-              let state = await manager.getState();
-              state = manager.applyDecay(state);
-              state = manager.advanceRumination(state);
-              await manager.saveState(state);
+              for (const agentId of listAgentIds(cfg)) {
+                const manager = getManager(agentId);
+                let state = await manager.getState();
+                state = manager.applyDecay(state);
+                state = manager.advanceRumination(state);
+                await manager.saveState(state);
+              }
             } catch (err) {
-              api.logger?.error?.(`[emotion-engine] Decay service error: ${err}`);
+              api.logger?.error?.(`[openfeelz] Decay service error: ${err}`);
             }
           }, ms);
           api.logger?.info?.(
-            `emotion-engine: decay service started (interval: ${config.decayServiceIntervalMinutes}m)`,
+            `openfeelz: decay service started (interval: ${config.decayServiceIntervalMinutes}m)`,
           );
         },
         stop: () => {
@@ -166,14 +245,14 @@ const emotionEnginePlugin = {
             clearInterval(intervalHandle);
             intervalHandle = null;
           }
-          api.logger?.info?.("emotion-engine: decay service stopped");
+          api.logger?.info?.("openfeelz: decay service stopped");
         },
       });
     }
 
     // -- CLI --
     api.registerCli(
-      ({ program }: { program: any }) => registerEmotionCli({ program, manager }),
+      ({ program }: { program: any }) => registerEmotionCli({ program, getManager, config }),
       { commands: ["emotion"] },
     );
 
@@ -181,7 +260,7 @@ const emotionEnginePlugin = {
     if (config.dashboardEnabled) {
       api.registerHttpRoute({
         path: "/emotion-dashboard",
-        handler: createDashboardHandler(manager),
+        handler: createDashboardHandler(getManager),
       });
     }
   },

@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/emotion-engine",
+  "name": "openfeelz",
   "version": "0.1.0",
   "description": "PAD + Ekman + OCEAN emotional model plugin for OpenClaw agents",
   "type": "module",
@@ -10,7 +10,7 @@
     "./mcp": "./dist/src/mcp/mcp-server.js"
   },
   "bin": {
-    "emotion-engine-mcp": "./dist/src/mcp/mcp-server.js"
+    "openfeelz-mcp": "./dist/src/mcp/mcp-server.js"
   },
   "scripts": {
     "test": "vitest run",
@@ -18,7 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint ."
+    "lint": "npx oxlint ."
   },
   "openclaw": {
     "extensions": [
@@ -36,5 +36,28 @@
     "@sinclair/typebox": "^0.34.48",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trianglegrrl/openfeelz.git"
+  },
+  "homepage": "https://github.com/trianglegrrl/openfeelz#readme",
+  "bugs": {
+    "url": "https://github.com/trianglegrrl/openfeelz/issues"
+  },
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "emotion",
+    "affective-computing",
+    "personality",
+    "ocean",
+    "pad",
+    "ai-agent",
+    "mcp"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
 }

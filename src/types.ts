@@ -1,5 +1,5 @@
 /**
- * Core type definitions for the Emotion Engine plugin.
+ * Core type definitions for the OpenFeelz plugin.
  *
  * Combines:
  *  - PAD (Pleasure-Arousal-Dominance) dimensional model
@@ -178,10 +178,37 @@ export interface EmotionBucket {
 }
 
 // ---------------------------------------------------------------------------
+// Cached LLM Analysis
+// ---------------------------------------------------------------------------
+
+/** Cached personality analysis from background LLM job. */
+export interface CachedPersonalityAnalysis {
+  summary: string;
+  generatedAt: string;
+  pad: { pleasure: number; arousal: number; dominance: number };
+  extensions: { connection: number; curiosity: number; energy: number; trust: number };
+  ocean: { openness: number; conscientiousness: number; extraversion: number; agreeableness: number; neuroticism: number };
+}
+
+/** Cached emotional state description from background LLM job. */
+export interface CachedEmotionalStateDescription {
+  summary: string;
+  generatedAt: string;
+  primary: string;
+  intensity: number;
+  notes: string[];
+}
+
+export interface CachedAnalysis {
+  personality?: CachedPersonalityAnalysis;
+  emotionalState?: CachedEmotionalStateDescription;
+}
+
+// ---------------------------------------------------------------------------
 // Persisted State (v2)
 // ---------------------------------------------------------------------------
 
-/** Complete emotion engine state persisted to disk. */
+/** Complete OpenFeelz state persisted to disk. */
 export interface EmotionEngineState {
   /** Schema version, always 2. */
   version: 2;
@@ -212,6 +239,8 @@ export interface EmotionEngineState {
     totalUpdates: number;
     createdAt: string;
   };
+  /** Cached LLM analysis (written by background service). */
+  cachedAnalysis?: CachedAnalysis;
 }
 
 // ---------------------------------------------------------------------------
@@ -246,7 +275,7 @@ export interface EmotionDimensionDelta {
 // Plugin Configuration (resolved)
 // ---------------------------------------------------------------------------
 
-/** Fully resolved configuration for the emotion engine plugin. */
+/** Fully resolved configuration for the OpenFeelz plugin. */
 export interface EmotionEngineConfig {
   apiKey?: string;
   baseUrl: string;
@@ -276,7 +305,7 @@ export interface EmotionEngineConfig {
 
 /** Default configuration values. */
 export const DEFAULT_CONFIG: EmotionEngineConfig = {
-  baseUrl: "https://api.anthropic.com",
+  baseUrl: "https://api.openai.com/v1",
   model: "claude-sonnet-4-5-20250514",
   confidenceMin: 0.35,
   halfLifeHours: 12,

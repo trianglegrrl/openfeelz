@@ -1,5 +1,5 @@
 /**
- * MCP (Model Context Protocol) server for the emotion engine.
+ * MCP (Model Context Protocol) server for the OpenFeelz.
  *
  * Exposes emotion state as MCP resources and tools so external clients
  * (Cursor, Claude Desktop, etc.) can query and modify the agent's
@@ -16,6 +16,7 @@ import {
   computeOverallIntensity,
 } from "../model/emotion-model.js";
 import type { StateManager } from "../state/state-manager.js";
+import { formatStatusMarkdown } from "../format/status-markdown.js";
 
 // ---------------------------------------------------------------------------
 // Types for our MCP abstraction (decoupled from SDK for testability)
@@ -48,16 +49,19 @@ interface McpServerConfig {
 // ---------------------------------------------------------------------------
 
 /**
- * Create the MCP server configuration for the emotion engine.
+ * Create the MCP server configuration for the OpenFeelz.
  */
 export function createEmotionMcpServer(manager: StateManager): McpServerConfig {
   return {
-    name: "emotion-engine",
+    name: "openfeelz",
     version: "0.1.0",
     tools: [
       createQueryTool(manager),
       createModifyTool(manager),
       createSetPersonalityTool(manager),
+      createSetDimensionTool(manager),
+      createResetTool(manager),
+      createSetDecayTool(manager),
     ],
     resources: [
       createStateResource(manager),
@@ -84,7 +88,7 @@ function createQueryTool(manager: StateManager): McpTool {
         },
       },
     },
-    async handler(params) {
+    async handler(_params) {
       let state = await manager.getState();
       state = manager.applyDecay(state);
       await manager.saveState(state);
@@ -97,6 +101,8 @@ function createQueryTool(manager: StateManager): McpTool {
         personality: state.personality,
         ruminationActive: state.rumination.active.length,
         totalUpdates: state.meta.totalUpdates,
+        statusMarkdown: formatStatusMarkdown(state),
+        cachedAnalysis: state.cachedAnalysis,
       };
 
       return { content: JSON.stringify(data, null, 2) };
@@ -172,6 +178,121 @@ function createSetPersonalityTool(manager: StateManager): McpTool {
         content: JSON.stringify({
           personality: state.personality,
           newBaseline: state.baseline,
+        }, null, 2),
+      };
+    },
+  };
+}
+
+function createSetDimensionTool(manager: StateManager): McpTool {
+  return {
+    name: "set_dimension",
+    description: "Set a PAD/extension dimension to an absolute value",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dimension: {
+          type: "string",
+          enum: [...DIMENSION_NAMES],
+          description: "Dimension name",
+        },
+        value: { type: "number", description: "Value (-1 to 1 for PAD, 0 to 1 for extensions)" },
+      },
+      required: ["dimension", "value"],
+    },
+    async handler(params) {
+      const dimension = params.dimension as string;
+      const value = params.value as number;
+
+      if (!DIMENSION_NAMES.includes(dimension as DimensionName)) {
+        throw new Error(`Unknown dimension: ${dimension}`);
+      }
+
+      let state = await manager.getState();
+      state = manager.applyDecay(state);
+      state = manager.setDimension(state, dimension as DimensionName, value);
+      await manager.saveState(state);
+
+      return {
+        content: JSON.stringify({
+          dimensions: state.dimensions,
+          primaryEmotion: computePrimaryEmotion(state.basicEmotions),
+        }, null, 2),
+      };
+    },
+  };
+}
+
+function createResetTool(manager: StateManager): McpTool {
+  return {
+    name: "reset",
+    description: "Reset emotional state to baseline (all or specific dimensions)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dimensions: {
+          type: "array",
+          items: { type: "string", enum: [...DIMENSION_NAMES] },
+          description: "Optional: specific dimensions to reset. Omit to reset all.",
+        },
+      },
+    },
+    async handler(params) {
+      const dims = params.dimensions as string[] | undefined;
+      const validDims = dims?.filter((d) =>
+        DIMENSION_NAMES.includes(d as DimensionName),
+      ) as DimensionName[] | undefined;
+
+      let state = await manager.getState();
+      state = manager.resetToBaseline(state, validDims);
+      await manager.saveState(state);
+
+      return {
+        content: JSON.stringify({
+          reset: true,
+          dimensions: state.dimensions,
+          basicEmotions: state.basicEmotions,
+          primaryEmotion: computePrimaryEmotion(state.basicEmotions),
+        }, null, 2),
+      };
+    },
+  };
+}
+
+function createSetDecayTool(manager: StateManager): McpTool {
+  return {
+    name: "set_decay",
+    description: "Set the decay rate for a dimension (units: per hour)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dimension: {
+          type: "string",
+          enum: [...DIMENSION_NAMES],
+          description: "Dimension name",
+        },
+        rate: { type: "number", description: "Decay rate (per hour, >= 0)" },
+      },
+      required: ["dimension", "rate"],
+    },
+    async handler(params) {
+      const dimension = params.dimension as string;
+      const rate = params.rate as number;
+
+      if (!DIMENSION_NAMES.includes(dimension as DimensionName)) {
+        throw new Error(`Unknown dimension: ${dimension}`);
+      }
+      if (typeof rate !== "number" || rate < 0) {
+        throw new Error("rate must be >= 0");
+      }
+
+      let state = await manager.getState();
+      state = { ...state, decayRates: { ...state.decayRates, [dimension as DimensionName]: rate } };
+      await manager.saveState(state);
+
+      return {
+        content: JSON.stringify({
+          decayRates: state.decayRates,
         }, null, 2),
       };
     },

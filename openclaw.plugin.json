@@ -1,11 +1,11 @@
 {
-  "id": "emotion-engine",
-  "name": "Emotion Engine",
+  "id": "openfeelz",
+  "name": "OpenFeelz",
   "description": "PAD + Ekman + OCEAN emotional model with decay, rumination, and personality",
   "uiHints": {
     "model": {
       "label": "Classification Model",
-      "placeholder": "gpt-4o-mini",
+      "placeholder": "gpt-5-mini",
       "help": "OpenAI-compatible model for emotion classification"
     },
     "classifierUrl": {

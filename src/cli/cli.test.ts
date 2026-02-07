@@ -19,7 +19,7 @@ describe("cli", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "emotion-cli-test-"));
-    statePath = path.join(tmpDir, "emotion-engine.json");
+    statePath = path.join(tmpDir, "openfeelz.json");
     manager = new StateManager(statePath, DEFAULT_CONFIG);
     program = new Command();
     program.exitOverride(); // Don't call process.exit
@@ -39,15 +39,17 @@ describe("cli", () => {
     return program.parseAsync(["node", "test", ...args]);
   }
 
+  const getManager = (_id: string) => manager;
+
   it("registers the emotion command", () => {
-    registerEmotionCli({ program, manager });
+    registerEmotionCli({ program, getManager });
     const cmd = program.commands.find((c) => c.name() === "emotion");
     expect(cmd).toBeDefined();
   });
 
   describe("status", () => {
     it("prints formatted state", async () => {
-      registerEmotionCli({ program, manager });
+      registerEmotionCli({ program, getManager });
       await run("emotion", "status");
       const text = output.join("\n");
       expect(text).toContain("pleasure");
@@ -55,7 +57,7 @@ describe("cli", () => {
     });
 
     it("prints JSON with --json flag", async () => {
-      registerEmotionCli({ program, manager });
+      registerEmotionCli({ program, getManager });
       await run("emotion", "status", "--json");
       const text = output.join("\n");
       const data = JSON.parse(text);
@@ -65,14 +67,14 @@ describe("cli", () => {
 
   describe("personality", () => {
     it("shows current personality", async () => {
-      registerEmotionCli({ program, manager });
+      registerEmotionCli({ program, getManager });
       await run("emotion", "personality");
       const text = output.join("\n");
       expect(text).toContain("openness");
     });
 
     it("sets a trait with set subcommand", async () => {
-      registerEmotionCli({ program, manager });
+      registerEmotionCli({ program, getManager });
       await run("emotion", "personality", "set", "--trait", "openness", "--value", "0.8");
       const state = await manager.getState();
       expect(state.personality.openness).toBe(0.8);
@@ -81,7 +83,7 @@ describe("cli", () => {
 
   describe("reset", () => {
     it("resets to baseline", async () => {
-      registerEmotionCli({ program, manager });
+      registerEmotionCli({ program, getManager });
       // First apply a stimulus
       let state = await manager.getState();
       state = manager.applyStimulus(state, "angry", 0.9, "test");
@@ -95,7 +97,7 @@ describe("cli", () => {
 
   describe("history", () => {
     it("shows recent stimuli", async () => {
-      registerEmotionCli({ program, manager });
+      registerEmotionCli({ program, getManager });
       let state = await manager.getState();
       state = manager.applyStimulus(state, "happy", 0.7, "good news");
       await manager.saveState(state);
@@ -103,6 +105,35 @@ describe("cli", () => {
       await run("emotion", "history");
       const text = output.join("\n");
       expect(text).toContain("happy");
+    });
+  });
+
+  describe("modify", () => {
+    it("applies stimulus and updates state", async () => {
+      registerEmotionCli({ program, getManager });
+      await run("emotion", "modify", "--emotion", "angry", "--intensity", "0.8", "--trigger", "test");
+      const state = await manager.getState();
+      expect(state.basicEmotions.anger).toBeGreaterThan(0.1);
+      expect(output.join("\n")).toContain("Applied stimulus");
+    });
+  });
+
+  describe("context", () => {
+    it("outputs empty message when state is neutral", async () => {
+      registerEmotionCli({ program, getManager });
+      await run("emotion", "context");
+      expect(output.join("\n")).toContain("no emotion context");
+    });
+
+    it("outputs emotion block after stimulus", async () => {
+      registerEmotionCli({ program, getManager });
+      // Use strong anger to produce dimension deviations above threshold (0.15)
+      await run("emotion", "modify", "--emotion", "angry", "--intensity", "0.9", "--trigger", "test");
+      output = [];
+      await run("emotion", "context");
+      const text = output.join("\n");
+      expect(text).toContain("<emotion_state>");
+      expect(text).toContain("dimensions");
     });
   });
 });

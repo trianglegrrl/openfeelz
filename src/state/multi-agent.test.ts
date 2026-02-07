@@ -41,7 +41,7 @@ describe("multi-agent", () => {
         history: [],
       };
       await writeStateFile(
-        path.join(agentsRoot, "agent1", "agent", "emotion-engine.json"),
+        path.join(agentsRoot, "agent1", "agent", "openfeelz.json"),
         agent1State,
       );
 
@@ -60,7 +60,7 @@ describe("multi-agent", () => {
         history: [],
       };
       await writeStateFile(
-        path.join(agentsRoot, "agent2", "agent", "emotion-engine.json"),
+        path.join(agentsRoot, "agent2", "agent", "openfeelz.json"),
         agent2State,
       );
 
@@ -85,7 +85,7 @@ describe("multi-agent", () => {
         history: [],
       };
       await writeStateFile(
-        path.join(agentsRoot, "main", "agent", "emotion-engine.json"),
+        path.join(agentsRoot, "main", "agent", "openfeelz.json"),
         mainState,
       );
 
@@ -109,7 +109,7 @@ describe("multi-agent", () => {
           history: [],
         };
         await writeStateFile(
-          path.join(agentsRoot, `agent${i}`, "agent", "emotion-engine.json"),
+          path.join(agentsRoot, `agent${i}`, "agent", "openfeelz.json"),
           state,
         );
       }

@@ -16,7 +16,6 @@ import type {
   DimensionalState,
   EmotionDimensionDelta,
 } from "../types.js";
-import { BASIC_EMOTION_NAMES, DIMENSION_NAMES } from "../types.js";
 import { clampDimension, clampEmotion } from "./emotion-model.js";
 
 // ---------------------------------------------------------------------------

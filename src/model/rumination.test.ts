@@ -7,7 +7,7 @@ import {
   applyRuminationEffects,
 } from "./rumination.js";
 import { createDefaultDimensionalState, createDefaultBasicEmotions } from "./emotion-model.js";
-import type { RuminationState, EmotionStimulus } from "../types.js";
+import type { EmotionStimulus } from "../types.js";
 
 function makeStimulus(overrides: Partial<EmotionStimulus> = {}): EmotionStimulus {
   return {

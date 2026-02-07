@@ -7,7 +7,6 @@ import {
   computeRuminationProbability,
   computeResponseIntensityMultiplier,
 } from "./personality.js";
-import { createDefaultDimensionalState } from "./emotion-model.js";
 import type { OCEANProfile } from "../types.js";
 
 describe("personality", () => {

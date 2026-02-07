@@ -19,7 +19,7 @@ import type {
   EmotionDecayRates,
   OCEANProfile,
 } from "../types.js";
-import { BASIC_EMOTION_NAMES, DIMENSION_NAMES } from "../types.js";
+import { DIMENSION_NAMES } from "../types.js";
 import { clampDimension } from "./emotion-model.js";
 
 // ---------------------------------------------------------------------------

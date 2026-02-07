@@ -1,7 +1,7 @@
 /**
  * OpenClaw tool: emotion_state
  *
- * Exposes the emotion engine to the agent as a callable tool with actions:
+ * Exposes OpenFeelz to the agent as a callable tool with actions:
  *   query, modify, set_dimension, reset, set_personality, get_personality
  *
  * Uses @sinclair/typebox for parameter schema definition.

@@ -1,71 +1,90 @@
 # Deployment Log
 
-This document records every step taken to deploy the emotion-engine plugin
+This document records every step taken to deploy the openfeelz plugin
 to a live OpenClaw instance.
 
 ## Prerequisites
 
-- Remote OpenClaw instance accessible via SSH on port 18795
-- The `gh` CLI authenticated as `trianglegrrl`
-- The plugin source at `github.com:trianglegrrl/emotion-engine`
+- Remote OpenClaw instance accessible via SSH (e.g. `ellie@localhost`)
+- Plugin source at `workspace/source/openfeelz/`
+- `jq` on target for scripted tests
 
-## Steps
+## Automated Deploy (Recommended)
 
-### Step 1: SCP the plugin source to the remote machine
-
-```bash
-scp -P 18795 -r /home/a/.openclaw/workspace/source/emotion-engine/ \
-  remote-host:~/emotion-engine/
-```
-
-### Step 2: SSH into the remote machine
+Run from the OpenFeelz source directory:
 
 ```bash
-ssh -p 18795 remote-host
+./scripts/deploy-to-ellie.sh
 ```
 
-### Step 3: Install dependencies
+This script:
+
+1. Backs up `~/.openclaw/openclaw.json` to `~/.openclaw-backups/`
+2. Stops the OpenClaw gateway
+3. Runs `openclaw doctor`
+4. Runs `openclaw doctor --fix`
+5. Copies plugin source via rsync (excludes node_modules, dist, .git)
+6. Installs dependencies and builds on remote
+7. Installs plugin: `openclaw plugins install ~/openfeelz`
+8. Enables plugin and restarts gateway
+
+## Scripted Smoke Tests
+
+After deployment, run the smoke tests on the target:
 
 ```bash
-cd ~/emotion-engine
-npm install
+ssh ellie@localhost 'cd ~/openfeelz && chmod +x scripts/smoke-test.sh && ./scripts/smoke-test.sh'
 ```
 
-### Step 4: Run tests on the remote machine
+Tests:
+
+- `status --json` outputs valid JSON
+- `context` command runs (outputs emotion block or empty message)
+- `modify` applies stimulus; status reflects it
+- `context` contains `<emotion_state>` after stimulus
+- Decay reduces intensity over time (uses `EMOTION_HALF_LIFE_HOURS=0.001` for fast decay)
+- `reset` clears state
+
+## Manual Steps
+
+### 1. Backup config
 
 ```bash
-npm test
+ssh ellie@localhost 'mkdir -p ~/.openclaw-backups && cp -a ~/.openclaw/openclaw.json ~/.openclaw-backups/openclaw.json.$(date +%Y%m%d-%H%M%S)'
 ```
 
-### Step 5: Install the plugin into OpenClaw
+### 2. Stop gateway
 
 ```bash
-openclaw plugins install ~/emotion-engine
-openclaw plugins enable emotion-engine
+ssh ellie@localhost 'openclaw gateway stop'
 ```
 
-### Step 6: Verify with OpenClaw CLI
+### 3. Run doctor
 
 ```bash
-openclaw plugins list          # Confirm emotion-engine appears
-openclaw emotion status        # Check emotional state
-openclaw emotion personality   # Verify OCEAN profile
+ssh ellie@localhost 'openclaw doctor'
+ssh ellie@localhost 'openclaw doctor --fix'
 ```
 
-### Step 7: Restart the gateway
+### 4. Copy and install plugin
 
 ```bash
-# Restart to pick up the new plugin
-openclaw gateway restart
+rsync -avz --exclude node_modules --exclude dist --exclude .git \
+  . ellie@localhost:~/openfeelz/
+ssh ellie@localhost 'cd ~/openfeelz && npm install && npm run build'
+ssh ellie@localhost 'openclaw plugins install ~/openfeelz && openclaw plugins enable openfeelz'
 ```
 
-### Step 8: Verify hooks are active
+### 5. Restart gateway
 
 ```bash
-openclaw hooks list            # Confirm emotion-engine hooks
-openclaw emotion status --json # Verify JSON output
+ssh ellie@localhost 'openclaw gateway restart'
 ```
 
----
+### 6. Verify
 
-_Steps below are filled in during actual deployment._
+```bash
+ssh ellie@localhost 'openclaw emotion status'
+ssh ellie@localhost 'openclaw emotion context'
+ssh ellie@localhost 'openclaw emotion status --json'
+```

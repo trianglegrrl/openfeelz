@@ -18,7 +18,7 @@ import { DIMENSION_NAMES } from "../types.js";
 // Formatting Helpers
 // ---------------------------------------------------------------------------
 
-const INTENSITY_WORDS: Record<string, string> = {
+const _INTENSITY_WORDS: Record<string, string> = {
   low: "mildly",
   medium: "moderately",
   high: "strongly",

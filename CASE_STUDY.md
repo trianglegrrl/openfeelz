@@ -1,6 +1,6 @@
-# Case Study: Automated Deployment of the Emotion Engine Plugin
+# Case Study: Automated Deployment of the OpenFeelz Plugin
 
-This document records the end-to-end deployment of the `@openclaw/emotion-engine`
+This document records the end-to-end deployment of the OpenFeelz
 plugin to a live OpenClaw instance. Every step was performed by an AI agent
 (Claude, via Cursor IDE) with no human intervention during the deployment
 process. The human gave the instruction, went to bed, and the agent completed
@@ -24,19 +24,19 @@ written, tested, and passing before any deployment began.
 ### 2. SCP source to target machine
 
 ```
-$ scp -r emotion-engine/ ellie@localhost:~/emotion-engine/
+$ scp -r openfeelz/ ellie@localhost:~/openfeelz/
 ```
 
 ### 3. Install dependencies on target
 
 ```
-$ ssh ellie@localhost "cd ~/emotion-engine && npm install"
+$ ssh ellie@localhost "cd ~/openfeelz && npm install"
 ```
 
 ### 4. Run tests on target -- all 237 passing
 
 ```
-$ ssh ellie@localhost "cd ~/emotion-engine && npx vitest run"
+$ ssh ellie@localhost "cd ~/openfeelz && npx vitest run"
 
  Test Files  20 passed (20)
       Tests  237 passed (237)
@@ -46,21 +46,21 @@ $ ssh ellie@localhost "cd ~/emotion-engine && npx vitest run"
 ### 5. Install plugin into OpenClaw
 
 ```
-$ ssh ellie@localhost "openclaw plugins install ~/emotion-engine"
+$ ssh ellie@localhost "openclaw plugins install ~/openfeelz"
 
-Installing to /home/ellie/.openclaw/extensions/emotion-engine…
+Installing to /home/ellie/.openclaw/extensions/openfeelz…
 Installing plugin dependencies…
-[plugins] emotion-engine: registered (state: /home/ellie/emotion-engine.json, model: claude-sonnet-4-5-20250514, provider: auto)
-Installed plugin: emotion-engine
+[plugins] openfeelz: registered (state: /home/ellie/.openclaw/workspace/openfeelz.json, model: claude-sonnet-4-5-20250514, provider: auto)
+Installed plugin: openfeelz
 Restart the gateway to load plugins.
 ```
 
 ### 6. Enable plugin
 
 ```
-$ ssh ellie@localhost "openclaw plugins enable emotion-engine"
+$ ssh ellie@localhost "openclaw plugins enable openfeelz"
 
-Enabled plugin "emotion-engine". Restart the gateway to apply.
+Enabled plugin "openfeelz". Restart the gateway to apply.
 ```
 
 ### 7. Restart gateway
@@ -68,7 +68,7 @@ Enabled plugin "emotion-engine". Restart the gateway to apply.
 ```
 $ ssh ellie@localhost "openclaw gateway restart"
 
-[plugins] emotion-engine: registered (state: /home/ellie/emotion-engine.json, model: claude-sonnet-4-5-20250514, provider: auto)
+[plugins] openfeelz: registered (state: /home/ellie/.openclaw/workspace/openfeelz.json, model: claude-sonnet-4-5-20250514, provider: auto)
 Restarted systemd service: openclaw-gateway.service
 ```
 
@@ -81,7 +81,7 @@ Plugins (2/32 loaded)
 ┌──────────────┬──────────┬──────────┬──────────────────────────────────────────────┬─────────┐
 │ Name         │ ID       │ Status   │ Source                                       │ Version │
 ├──────────────┼──────────┼──────────┼──────────────────────────────────────────────┼─────────┤
-│ Emotion      │ emotion- │ loaded   │ ~/.openclaw/extensions/emotion-engine/       │ 0.1.0   │
+│ Emotion      │ emotion- │ loaded   │ ~/.openclaw/extensions/openfeelz/       │ 0.1.0   │
 │ Engine       │ engine   │          │ index.ts                                     │         │
 └──────────────┴──────────┴──────────┴──────────────────────────────────────────────┴─────────┘
 ```
@@ -127,7 +127,19 @@ OCEAN Personality Profile:
 
 Default neutral personality. All traits at midpoint.
 
-### 11. Verify CLI: `openclaw emotion status --json`
+### 11. Verify CLI: `openclaw emotion context`
+
+Outputs the XML block that would be injected into the system prompt:
+
+```
+$ ssh ellie@localhost "openclaw emotion context"
+
+(no emotion context to inject — state is neutral/empty)
+```
+
+After applying a stimulus, the context command outputs the `<emotion_state>` block with dimensions and recent emotions.
+
+### 12. Verify CLI: `openclaw emotion status --json`
 
 ```
 $ ssh ellie@localhost "openclaw emotion status --json"
@@ -164,7 +176,7 @@ $ ssh ellie@localhost "openclaw emotion status --json"
 }
 ```
 
-### 12. Verify HTTP dashboard
+### 13. Verify HTTP dashboard
 
 ```
 $ curl -s -H "Authorization: Bearer <token>" http://localhost:18795/emotion-dashboard | head -5
@@ -173,12 +185,12 @@ $ curl -s -H "Authorization: Bearer <token>" http://localhost:18795/emotion-dash
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Emotion Engine Dashboard</title>
+<title>OpenFeelz Dashboard</title>
 ```
 
 HTML dashboard served successfully at `/emotion-dashboard`.
 
-### 13. Verify dashboard JSON API
+### 14. Verify dashboard JSON API
 
 ```
 $ curl -s -H "Authorization: Bearer <token>" "http://localhost:18795/emotion-dashboard?format=json"
@@ -198,6 +210,23 @@ $ curl -s -H "Authorization: Bearer <token>" "http://localhost:18795/emotion-das
 
 JSON API endpoint functioning correctly with full state output.
 
+## Scripted Smoke Tests
+
+The `scripts/smoke-test.sh` script runs a series of automated checks after deployment:
+
+```bash
+ssh ellie@localhost 'cd ~/openfeelz && ./scripts/smoke-test.sh'
+```
+
+Tests include:
+
+- `status --json` outputs valid JSON
+- `context` command runs
+- `modify` applies stimulus; status reflects it
+- `context` contains `<emotion_state>` after stimulus
+- Decay reduces intensity over time (uses `EMOTION_HALF_LIFE_HOURS=0.001` for ~3.6s half-life)
+- `reset` clears state
+
 ## What Was Verified
 
 | Component | Method | Result |
@@ -205,12 +234,15 @@ JSON API endpoint functioning correctly with full state output.
 | Plugin loads at gateway startup | `openclaw plugins list` | Status: **loaded** |
 | CLI `emotion status` | SSH command | Renders dimension bars, baseline, primary emotion |
 | CLI `emotion status --json` | SSH command | Full JSON state with all dimensions, emotions, personality |
+| CLI `emotion context` | SSH command | Outputs XML block as injected into system prompt |
+| CLI `emotion modify` | SSH command | Applies stimulus, updates state |
 | CLI `emotion personality` | SSH command | OCEAN profile with bar visualization |
 | HTTP dashboard (HTML) | `curl /emotion-dashboard` | Full glassmorphism dashboard served |
 | HTTP dashboard (JSON) | `curl /emotion-dashboard?format=json` | Complete state JSON |
+| Scripted smoke tests | `./scripts/smoke-test.sh` | Modify, decay, reset verified |
 | Anthropic model config | Gateway startup log | `model: claude-sonnet-4-5-20250514, provider: auto` |
 | Auth profile resolution | Gateway startup log | API key resolved from `auth-profiles.json` |
-| Test suite on target | `npx vitest run` | 20 files, 237 tests, all passing |
+| Test suite on target | `npx vitest run` | 20 files, 240 tests, all passing |
 
 ## What This Demonstrates
 
@@ -233,4 +265,4 @@ JSON API endpoint functioning correctly with full state output.
 
 ## Repository
 
-https://github.com/trianglegrrl/emotion-engine
+https://github.com/trianglegrrl/openfeelz

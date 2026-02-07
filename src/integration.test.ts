@@ -1,5 +1,5 @@
 /**
- * Integration tests for the emotion engine plugin.
+ * Integration tests for the OpenFeelz plugin.
  *
  * Tests the full plugin registration cycle and end-to-end flows
  * using a mock OpenClaw plugin API.
@@ -8,9 +8,9 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
-describe("emotion-engine integration", () => {
+describe("openfeelz integration", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
@@ -36,7 +36,7 @@ describe("emotion-engine integration", () => {
       const registeredRoutes: any[] = [];
 
       const mockApi = {
-        id: "emotion-engine",
+        id: "openfeelz",
         config: {},
         pluginConfig: {
           apiKey: "test-key",
@@ -88,7 +88,7 @@ describe("emotion-engine integration", () => {
 
       const registeredServices: any[] = [];
       const mockApi = {
-        id: "emotion-engine",
+        id: "openfeelz",
         config: {},
         pluginConfig: { decayServiceEnabled: true },
         logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
@@ -102,8 +102,9 @@ describe("emotion-engine integration", () => {
 
       plugin.register(mockApi);
 
-      expect(registeredServices).toHaveLength(1);
-      expect(registeredServices[0].id).toBe("emotion-engine-decay");
+      expect(registeredServices.length).toBeGreaterThanOrEqual(1);
+      const decayService = registeredServices.find((s: any) => s.id === "openfeelz-decay");
+      expect(decayService).toBeDefined();
     });
   });
 
@@ -117,7 +118,7 @@ describe("emotion-engine integration", () => {
       const { DEFAULT_CONFIG } = await import("./types.js");
       const { computePrimaryEmotion, computeOverallIntensity } = await import("./model/emotion-model.js");
 
-      const statePath = path.join(tmpDir, "emotion-engine.json");
+      const statePath = path.join(tmpDir, "openfeelz.json");
       const manager = new StateManager(statePath, DEFAULT_CONFIG);
 
       // 1. Start fresh
@@ -175,7 +176,6 @@ describe("emotion-engine integration", () => {
 
       if (hasRumination) {
         // Advance rumination
-        const preArousal = state.dimensions.arousal;
         state = manager.advanceRumination(state);
 
         // Rumination should have applied effects and advanced stages
@@ -191,8 +191,6 @@ describe("emotion-engine integration", () => {
     });
 
     it("multi-agent awareness", async () => {
-      const { StateManager } = await import("./state/state-manager.js");
-      const { DEFAULT_CONFIG } = await import("./types.js");
       const { loadOtherAgentStates } = await import("./state/multi-agent.js");
       const { writeStateFile, buildEmptyState } = await import("./state/state-file.js");
 
@@ -214,7 +212,7 @@ describe("emotion-engine integration", () => {
           history: [],
         };
         await writeStateFile(
-          path.join(agentsRoot, agentId, "agent", "emotion-engine.json"),
+          path.join(agentsRoot, agentId, "agent", "openfeelz.json"),
           state,
         );
       }

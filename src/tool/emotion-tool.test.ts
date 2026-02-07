@@ -13,7 +13,7 @@ describe("emotion-tool", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "emotion-tool-test-"));
-    const statePath = path.join(tmpDir, "emotion-engine.json");
+    const statePath = path.join(tmpDir, "openfeelz.json");
     manager = new StateManager(statePath, DEFAULT_CONFIG);
     tool = createEmotionTool(manager);
   });

@@ -1,5 +1,5 @@
 /**
- * State Manager: the central orchestrator for the emotion engine.
+ * State Manager: the central orchestrator for OpenFeelz.
  *
  * Coordinates:
  *  - State persistence (read/write via state-file)
@@ -12,15 +12,14 @@
 
 import crypto from "node:crypto";
 import type {
-  BasicEmotionName,
   ClassificationResult,
   DimensionName,
   EmotionEngineConfig,
   EmotionEngineState,
   EmotionStimulus,
 } from "../types.js";
-import { BASIC_EMOTION_NAMES, DIMENSION_NAMES } from "../types.js";
-import { clampDimension, clampEmotion, createDefaultBasicEmotions } from "../model/emotion-model.js";
+import { DIMENSION_NAMES } from "../types.js";
+import { clampDimension, createDefaultBasicEmotions } from "../model/emotion-model.js";
 import {
   computeBaseline,
   computeDimensionDecayRates,

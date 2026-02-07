@@ -6,7 +6,7 @@ import {
 } from "./decay.js";
 import { createDefaultDimensionalState, createDefaultBasicEmotions } from "./emotion-model.js";
 import { createDefaultPersonality, computeBaseline, computeDimensionDecayRates, computeEmotionDecayRates } from "./personality.js";
-import type { DimensionalState, DecayRates, BasicEmotions, EmotionDecayRates } from "../types.js";
+import type { DimensionalState, BasicEmotions } from "../types.js";
 
 describe("decay", () => {
   const personality = createDefaultPersonality();

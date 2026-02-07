@@ -1,10 +1,10 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { StateManager } from "./state-manager.js";
 import { DEFAULT_CONFIG } from "../types.js";
-import type { EmotionEngineConfig, EmotionEngineState } from "../types.js";
+import type { EmotionEngineConfig } from "../types.js";
 
 function testConfig(overrides: Partial<EmotionEngineConfig> = {}): EmotionEngineConfig {
   return { ...DEFAULT_CONFIG, ...overrides };
@@ -17,7 +17,7 @@ describe("StateManager", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "emotion-sm-test-"));
-    statePath = path.join(tmpDir, "emotion-engine.json");
+    statePath = path.join(tmpDir, "openfeelz.json");
     manager = new StateManager(statePath, testConfig());
   });
 

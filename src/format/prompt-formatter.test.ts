@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { formatEmotionBlock, formatTimestamp, formatDimensionSummary } from "./prompt-formatter.js";
 import { buildEmptyState } from "../state/state-file.js";
-import type { EmotionEngineState, EmotionStimulus } from "../types.js";
+import type { EmotionStimulus } from "../types.js";
 
 function makeStimulus(overrides: Partial<EmotionStimulus> = {}): EmotionStimulus {
   return {

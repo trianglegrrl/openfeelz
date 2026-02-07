@@ -13,10 +13,8 @@
 import type {
   BasicEmotions,
   DecayRates,
-  DimensionName,
   DimensionalState,
   EmotionDecayRates,
-  BasicEmotionName,
 } from "../types.js";
 import { DIMENSION_NAMES, BASIC_EMOTION_NAMES } from "../types.js";
 import { clampDimension, clampEmotion } from "./emotion-model.js";

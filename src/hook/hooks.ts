@@ -1,5 +1,5 @@
 /**
- * OpenClaw hook handlers for the emotion engine.
+ * OpenClaw hook handlers for OpenFeelz.
  *
  * - before_agent_start: inject emotional context into system prompt
  * - agent_end: classify emotions from conversation messages
@@ -7,6 +7,7 @@
 
 import type { EmotionEngineConfig } from "../types.js";
 import { StateManager } from "../state/state-manager.js";
+import { loadOtherAgentStatesFromConfig } from "../state/multi-agent.js";
 import { classifyEmotion } from "../classify/classifier.js";
 import { formatEmotionBlock } from "../format/prompt-formatter.js";
 
@@ -47,11 +48,15 @@ interface AgentEndEvent {
  * 6. Return prependContext for emotional context prepend
  */
 export function createBootstrapHook(
-  manager: StateManager,
+  getManager: (agentId: string) => StateManager,
   config: EmotionEngineConfig,
+  openclawConfig?: Record<string, unknown>,
 ): (event: BootstrapEvent) => Promise<BootstrapResult | undefined> {
   return async (event) => {
     if (!config.contextEnabled) return undefined;
+
+    const agentId = event.agentId ?? "main";
+    const manager = getManager(agentId);
 
     try {
       let state = await manager.getState();
@@ -65,9 +70,11 @@ export function createBootstrapHook(
       // Persist
       await manager.saveState(state);
 
-      // Format emotion block
       const userKey = event.userKey ?? "unknown";
-      const agentId = event.agentId ?? "main";
+      const otherAgents =
+        config.maxOtherAgents > 0 && openclawConfig
+          ? await loadOtherAgentStatesFromConfig(openclawConfig, agentId, config.maxOtherAgents)
+          : [];
 
       const block = formatEmotionBlock(state, userKey, agentId, {
         maxUserEntries: 3,
@@ -75,13 +82,14 @@ export function createBootstrapHook(
         halfLifeHours: config.halfLifeHours,
         trendWindowHours: config.trendWindowHours,
         timeZone: config.timezone,
+        otherAgents,
       });
 
       if (!block) return undefined;
 
       return { prependContext: block };
     } catch (err) {
-      console.error("[emotion-engine] Bootstrap hook error:", err);
+      console.error("[openfeelz] Bootstrap hook error:", err);
       return undefined;
     }
   };
@@ -102,7 +110,7 @@ export function createBootstrapHook(
  * 5. Persist
  */
 export function createAgentEndHook(
-  manager: StateManager,
+  getManager: (agentId: string) => StateManager,
   config: EmotionEngineConfig,
   fetchFn?: typeof fetch,
 ): (event: AgentEndEvent) => Promise<void> {
@@ -116,11 +124,13 @@ export function createAgentEndHook(
       return;
     }
 
+    const agentId = event.agentId ?? "main";
+    const manager = getManager(agentId);
+
     try {
       let state = await manager.getState();
 
       const userKey = event.userKey ?? "unknown";
-      const agentId = event.agentId ?? "main";
 
       // Find latest user message
       const userMsg = findLast(event.messages, "user");
@@ -158,7 +168,7 @@ export function createAgentEndHook(
 
       await manager.saveState(state);
     } catch (err) {
-      console.error("[emotion-engine] Agent end hook error:", err);
+      console.error("[openfeelz] Agent end hook error:", err);
     }
   };
 }

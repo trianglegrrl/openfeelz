@@ -13,7 +13,7 @@ describe("hooks", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "emotion-hooks-test-"));
-    statePath = path.join(tmpDir, "emotion-engine.json");
+    statePath = path.join(tmpDir, "openfeelz.json");
     manager = new StateManager(statePath, DEFAULT_CONFIG);
   });
 
@@ -25,9 +25,11 @@ describe("hooks", () => {
   // Bootstrap Hook (before_agent_start)
   // -----------------------------------------------------------------------
 
+  const getManager = (_id: string) => manager;
+
   describe("createBootstrapHook", () => {
     it("returns a handler function", () => {
-      const handler = createBootstrapHook(manager, DEFAULT_CONFIG);
+      const handler = createBootstrapHook(getManager, DEFAULT_CONFIG);
       expect(typeof handler).toBe("function");
     });
 
@@ -43,7 +45,7 @@ describe("hooks", () => {
       state.dimensions.pleasure = 0.6;
       await manager.saveState(state);
 
-      const handler = createBootstrapHook(manager, DEFAULT_CONFIG);
+      const handler = createBootstrapHook(getManager, DEFAULT_CONFIG);
       const event = { prompt: "Hello", userKey: "user1", agentId: "main" };
       const result = await handler(event);
 
@@ -54,7 +56,7 @@ describe("hooks", () => {
     });
 
     it("returns undefined when no emotion data exists", async () => {
-      const handler = createBootstrapHook(manager, DEFAULT_CONFIG);
+      const handler = createBootstrapHook(getManager, DEFAULT_CONFIG);
       const event = { prompt: "Hello", userKey: "user1", agentId: "main" };
       const result = await handler(event);
 
@@ -76,9 +78,9 @@ describe("hooks", () => {
       });
       // Write directly to bypass saveState's lastUpdated override
       const { writeStateFile } = await import("../state/state-file.js");
-      await writeStateFile(path.join(tmpDir, "emotion-engine.json"), { ...state, lastUpdated: pastDate });
+      await writeStateFile(path.join(tmpDir, "openfeelz.json"), { ...state, lastUpdated: pastDate });
 
-      const handler = createBootstrapHook(manager, DEFAULT_CONFIG);
+      const handler = createBootstrapHook(getManager, DEFAULT_CONFIG);
       await handler({ prompt: "Hello", userKey: "user1", agentId: "main" });
 
       // Verify decay was applied (pleasure should have decayed from 0.9)
@@ -97,7 +99,7 @@ describe("hooks", () => {
       });
       await manager.saveState(state);
 
-      const handler = createBootstrapHook(manager, config);
+      const handler = createBootstrapHook(getManager, config);
       const result = await handler({ prompt: "Hello", userKey: "user1", agentId: "main" });
       expect(result).toBeUndefined();
     });
@@ -109,12 +111,12 @@ describe("hooks", () => {
 
   describe("createAgentEndHook", () => {
     it("returns a handler function", () => {
-      const handler = createAgentEndHook(manager, DEFAULT_CONFIG);
+      const handler = createAgentEndHook(getManager, DEFAULT_CONFIG);
       expect(typeof handler).toBe("function");
     });
 
     it("does nothing when no messages are provided", async () => {
-      const handler = createAgentEndHook(manager, DEFAULT_CONFIG);
+      const handler = createAgentEndHook(getManager, DEFAULT_CONFIG);
       await handler({ success: true, messages: [], userKey: "user1", agentId: "main" });
       const state = await manager.getState();
       expect(Object.keys(state.users)).toHaveLength(0);
@@ -141,7 +143,7 @@ describe("hooks", () => {
 
       const config = { ...DEFAULT_CONFIG, apiKey: "sk-ant-test" };
       const mgr = new StateManager(statePath, config);
-      const handler = createAgentEndHook(mgr, config, mockFetchFn);
+      const handler = createAgentEndHook(() => mgr, config, mockFetchFn);
 
       await handler({
         success: true,

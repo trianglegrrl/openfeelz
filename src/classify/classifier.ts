@@ -184,7 +184,7 @@ export async function classifyEmotion(
     if (!options.apiKey) {
       throw new Error(
         "Emotion classifier requires either classifierUrl or apiKey. " +
-        "Configure apiKey or set ANTHROPIC_API_KEY / OPENAI_API_KEY in the emotion-engine plugin config.",
+        "Configure apiKey or set ANTHROPIC_API_KEY / OPENAI_API_KEY in the openfeelz plugin config.",
       );
     }
 
@@ -209,7 +209,7 @@ export async function classifyEmotion(
     if (err instanceof Error && err.message.includes("requires either")) {
       throw err;
     }
-    console.error("[emotion-engine] Classification failed:", err);
+    console.error("[openfeelz] Classification failed:", err);
     return { ...NEUTRAL_RESULT };
   }
 }

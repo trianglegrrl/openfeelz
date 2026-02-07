@@ -5,7 +5,6 @@ import {
   parseClassifierResponse,
   coerceClassificationResult,
 } from "./classifier.js";
-import type { ClassificationResult } from "../types.js";
 import { DEFAULT_CONFIG } from "../types.js";
 
 describe("classifier", () => {

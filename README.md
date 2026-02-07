@@ -1,36 +1,55 @@
-# @openclaw/emotion-engine
+# OpenFeelz
 
-A publishable OpenClaw plugin that gives AI agents a sophisticated emotional model with personality-influenced decay, rumination, and multi-agent awareness.
+> *"Let's build robots with Genuine People Personalities, they said. So they tried it out with me. I'm a personality prototype. You can tell can't you?"*
+> -- Douglas Adams, *The Hitchhiker's Guide to the Galaxy*
 
-## Features
+[![CI](https://github.com/trianglegrrl/openfeelz/actions/workflows/ci.yml/badge.svg)](https://github.com/trianglegrrl/openfeelz/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22-brightgreen.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
+[![OpenClaw Plugin](https://img.shields.io/badge/OpenClaw-plugin-purple.svg)](https://openclaw.com)
 
-- **PAD Dimensional Model**: Pleasure, Arousal, Dominance + Connection, Curiosity, Energy, Trust
-- **Ekman Basic Emotions**: Happiness, Sadness, Anger, Fear, Disgust, Surprise
-- **OCEAN Personality**: Big Five traits influence baselines, decay rates, and response intensity
-- **Exponential Decay**: Emotions decay toward personality-influenced baselines over time
-- **Rumination Engine**: Intense emotions continue to influence state across interactions
-- **Goal-Aware Modulation**: Personality-inferred goals amplify relevant emotions
-- **Multi-Agent Awareness**: See other agents' emotional states in the system prompt
-- **Custom Taxonomy**: Define your own emotion labels with dimension mappings
-- **LLM Classification**: Automatically classify user/agent emotions via OpenAI-compatible models
-- **Web Dashboard**: Glassmorphism UI at `/emotion-dashboard`
-- **MCP Server**: Expose emotional state to Cursor, Claude Desktop, etc.
-- **CLI Tools**: `openclaw emotion status`, `reset`, `personality`, `history`, `decay`
+---
+
+Hey folks! :)
+
+So here's the thing: AI agents don't have feelings. Obviously. But the way they *respond* to emotional context -- the way they mirror, adapt, and adjust their tone -- that matters a lot. And right now, most agents are just... flat. They don't track that you've been frustrated for the last three messages. They don't notice that they themselves have been cheerful while you're clearly having a bad day. They just vibes-check every single message independently and hope for the best.
+
+OpenFeelz is my attempt to fix that. It's an [OpenClaw](https://openclaw.com) plugin that gives AI agents a real emotional model -- not a toy "sentiment is positive!" flag, but a proper multidimensional system with personality-influenced baselines, exponential decay, rumination, and multi-agent awareness. Think of it as giving your agent the emotional equivalent of short-term memory.
+
+I'm not claiming this makes agents *sentient* or whatever. (I am not a philosopher and I have no reputation to care about there.) But I've spent a lot of time working on this, and I think the difference in interaction quality is genuinely noticeable. The agent remembers that you were frustrated, and it carries a little residual empathy into the next exchange. That's... actually kind of cool? Life is so cool.
+
+## What's Under the Hood
+
+- **PAD Dimensional Model** -- Pleasure, Arousal, Dominance + Connection, Curiosity, Energy, Trust. Seven continuous dimensions that capture emotional state way better than discrete labels alone.
+- **Ekman Basic Emotions** -- Happiness, Sadness, Anger, Fear, Disgust, Surprise. The classics. These map onto the dimensional model.
+- **OCEAN Personality** -- Big Five traits (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism) influence baselines, decay rates, and response intensity. Your agent can be a neurotic introvert or a chill extravert. :)
+- **Exponential Decay** -- Emotions fade over time toward personality-influenced baselines. Surprise fades fast (~5 hours). Trust fades slow (~20 hours). This isn't arbitrary -- it's modeled on actual affect research.
+- **Rumination Engine** -- Intense emotions don't just disappear. They echo. If the agent experiences something strongly enough, it continues to process across interactions, just like humans do.
+- **Goal-Aware Modulation** -- Personality-inferred goals amplify relevant emotions. A high-openness agent gets *more* curious, not less.
+- **Multi-Agent Awareness** -- If you're running multiple agents, they can see each other's emotional states. Empathetic coordination!
+- **Custom Taxonomy** -- Don't like my emotion labels? Define your own with custom dimension mappings.
+- **LLM Classification** -- Automatically detects emotions in user and agent messages via OpenAI-compatible models.
+- **Web Dashboard** -- Glassmorphism UI at `/emotion-dashboard` because I like pretty things.
+- **MCP Server** -- Expose emotional state to Cursor, Claude Desktop, etc.
+- **CLI Tools** -- `openclaw emotion status`, `reset`, `personality`, `history`, `decay`
 
 ## Installation
 
 ```bash
-openclaw plugins install @openclaw/emotion-engine
-openclaw plugins enable emotion-engine
+openclaw plugins install openfeelz
+openclaw plugins enable openfeelz
 ```
+
+That's it. No, really. :)
 
 ## How Emotional Context Gets Into the Agent
 
-This is the core of what the plugin does, so it is worth understanding in detail.
+This is the core of what the plugin does, so let me walk you through it. I think it's worth understanding in detail because it's actually pretty elegant (if I do say so myself).
 
 ### The Lifecycle
 
-Every time the agent starts a new turn, the emotion engine runs through this sequence:
+Every time the agent starts a new turn, OpenFeelz runs through this sequence:
 
 ```
 User sends a message
@@ -70,7 +89,7 @@ User sends a message
 
 ### What the Agent Sees
 
-The plugin prepends an `<emotion_state>` XML block to the system prompt. Here is a concrete example of what that looks like:
+The plugin prepends an `<emotion_state>` XML block to the system prompt. Here's a concrete example of what that looks like:
 
 ```xml
 <emotion_state>
@@ -105,11 +124,11 @@ The block only appears when there is something to show. If the agent has no emot
 
 ### When Injection Is Disabled
 
-Set `contextEnabled: false` in your config to stop the block from being prepended. The rest of the system (classification, decay, the tool, the dashboard) still works -- the agent just will not see the emotional context in its prompt.
+Set `contextEnabled: false` in your config to stop the block from being prepended. The rest of the system (classification, decay, the tool, the dashboard) still works -- the agent just won't see the emotional context in its prompt.
 
 ## How Decay Works
 
-Emotions do not last forever. After an emotional event, every dimension and basic emotion gradually returns to the agent's personality-influenced baseline using exponential decay:
+Ok, so this is the part where I get to be a nerd about math. Emotions don't last forever. (If yours do, I am not a doctor, but maybe talk to one?) After an emotional event, every dimension and basic emotion gradually returns to the agent's personality-influenced baseline using exponential decay:
 
 ```
 newValue = baseline + (currentValue - baseline) * e^(-rate * elapsedHours)
@@ -118,7 +137,7 @@ newValue = baseline + (currentValue - baseline) * e^(-rate * elapsedHours)
 This means emotions fade quickly at first and then slowly approach baseline. The rate is expressed in units of "per hour," and the half-life (the time it takes for the distance from baseline to halve) is:
 
 ```
-halfLife = ln(2) / rate ≈ 0.693 / rate
+halfLife = ln(2) / rate ~ 0.693 / rate
 ```
 
 ### Default Decay Rates
@@ -141,7 +160,7 @@ halfLife = ln(2) / rate ≈ 0.693 / rate
 
 ### Concrete Example: Anger at 0.85
 
-If the agent receives an anger stimulus at intensity 0.85, here is how it decays over time with the default rate (0.058/hr, toward baseline 0):
+I find concrete examples more useful than formulas, so here's what happens if the agent receives an anger stimulus at intensity 0.85, with the default rate (0.058/hr, toward baseline 0):
 
 | Hours Elapsed | Anger Value | What It Feels Like |
 |---------------|-------------|---------------------|
@@ -154,9 +173,9 @@ If the agent receives an anger stimulus at intensity 0.85, here is how it decays
 
 ### How Personality Affects Decay
 
-OCEAN personality traits modulate the rates:
+OCEAN personality traits modulate the rates. This is where it gets interesting:
 
-- **High neuroticism (0.9)**: Pleasure decay slows by ~0.8x. Sadness, anger, and fear decay slows by ~0.84-0.88x. Negative emotions linger.
+- **High neuroticism (0.9)**: Pleasure decay slows by ~0.8x. Sadness, anger, and fear decay slows by ~0.84-0.88x. Negative emotions linger. (Sound like anyone you know?)
 - **High extraversion (0.9)**: Sadness decay speeds up by ~1.16x. Arousal and pleasure recovery speed up. Extraverts bounce back.
 - **High agreeableness (0.9)**: Anger fades ~1.12x faster. Connection decays more slowly.
 - **High openness (0.9)**: Curiosity and surprise decay more slowly. The agent stays interested longer.
@@ -196,13 +215,13 @@ openclaw emotion personality set --trait neuroticism --value 0.8
 
 ## Configuration
 
-Configure in `~/.openclaw/openclaw.json` under `plugins.entries.emotion-engine.config`:
+Configure in `~/.openclaw/openclaw.json` under `plugins.entries.openfeelz.config`:
 
 ```json
 {
   "plugins": {
     "entries": {
-      "emotion-engine": {
+      "openfeelz": {
         "config": {
           "apiKey": "${OPENAI_API_KEY}",
           "model": "gpt-4o-mini",
@@ -305,14 +324,14 @@ Append `?format=json` for a raw JSON API endpoint.
 
 ## MCP Server
 
-Use the standalone MCP server entry point with any MCP-compatible client:
+If you want to use this with Cursor, Claude Desktop, or any MCP-compatible client, you can use the standalone MCP server entry point:
 
 ```json
 {
   "mcpServers": {
-    "emotion-engine": {
+    "openfeelz": {
       "command": "npx",
-      "args": ["@openclaw/emotion-engine/mcp"]
+      "args": ["openfeelz/mcp"]
     }
   }
 }
@@ -331,12 +350,14 @@ Use the standalone MCP server entry point with any MCP-compatible client:
 
 ## Migration from emotion-state-1
 
+If you were using the old emotion-state hook:
+
 ```bash
 openclaw hooks disable emotion-state
 openclaw emotion migrate
 ```
 
-The migration converts v1 state files (flat labels + string intensities) to v2 format (dimensional model + numeric intensities). The new plugin uses a separate state file (`emotion-engine.json`) so there is no risk of data loss.
+The migration converts v1 state files (flat labels + string intensities) to v2 format (dimensional model + numeric intensities). The new plugin uses a separate state file (`openfeelz.json`) so there is no risk of data loss.
 
 ## Architecture
 
@@ -381,8 +402,15 @@ npm install
 npm test              # Run all tests
 npm run test:watch    # Watch mode
 npm run test:coverage # Coverage report
+npm run typecheck     # TypeScript strict checking
+npm run lint          # oxlint
+npm run build         # Compile to dist/
 ```
+
+## Contributing
+
+This is worth digging into more, and I'd love help. If you want to fact-check me, improve the model, or just poke around -- please do! DM me or open an issue. Happy to answer questions! :)
 
 ## License
 
-MIT
+[MIT](LICENSE)

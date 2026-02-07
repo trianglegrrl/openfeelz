@@ -1,5 +1,5 @@
 /**
- * CLI commands for the emotion engine plugin.
+ * CLI commands for the OpenFeelz plugin.
  *
  * Registered via api.registerCli() with Commander.js.
  *
@@ -14,22 +14,29 @@
 
 import type { Command } from "commander";
 import type { OCEANTrait, DimensionName } from "../types.js";
+import { DEFAULT_CONFIG } from "../types.js";
 import { DIMENSION_NAMES, OCEAN_TRAITS } from "../types.js";
 import {
   computePrimaryEmotion,
   computeOverallIntensity,
 } from "../model/emotion-model.js";
+import { formatEmotionBlock } from "../format/prompt-formatter.js";
+import type { EmotionEngineConfig } from "../types.js";
 import type { StateManager } from "../state/state-manager.js";
 
 interface CliParams {
   program: Command;
-  manager: StateManager;
+  getManager: (agentId: string) => StateManager;
+  config?: Partial<EmotionEngineConfig>;
 }
 
-export function registerEmotionCli({ program, manager }: CliParams): void {
+export function registerEmotionCli({ program, getManager, config }: CliParams): void {
   const root = program
     .command("emotion")
-    .description("Emotion engine utilities");
+    .description("OpenFeelz utilities")
+    .option("--agent <id>", "Agent ID", "main");
+
+  const agentOpts = () => (root.opts() as { agent?: string }).agent ?? "main";
 
   // -----------------------------------------------------------------------
   // status
@@ -38,8 +45,10 @@ export function registerEmotionCli({ program, manager }: CliParams): void {
   root
     .command("status")
     .description("Show current emotional state")
+    .option("--agent <id>", "Agent ID", "main")
     .option("--json", "Output raw JSON")
-    .action(async (opts: { json?: boolean }) => {
+    .action(async (opts: { json?: boolean; agent?: string }) => {
+      const manager = getManager(opts.agent ?? agentOpts());
       let state = await manager.getState();
       state = manager.applyDecay(state);
       await manager.saveState(state);
@@ -94,13 +103,67 @@ export function registerEmotionCli({ program, manager }: CliParams): void {
     });
 
   // -----------------------------------------------------------------------
+  // context
+  // -----------------------------------------------------------------------
+
+  root
+    .command("context")
+    .description("Output emotion state as XML block (as injected into system prompt)")
+    .option("--agent <id>", "Agent ID", "main")
+    .option("--user <key>", "User key for user emotion bucket", "default")
+    .action(async (opts: { agent?: string; user?: string }) => {
+      const manager = getManager(opts.agent ?? agentOpts());
+      let state = await manager.getState();
+      state = manager.applyDecay(state);
+      state = manager.advanceRumination(state);
+      await manager.saveState(state);
+
+      const cfg = config ?? {};
+      const block = formatEmotionBlock(state, opts.user ?? "default", opts.agent ?? agentOpts(), {
+        maxUserEntries: 3,
+        maxAgentEntries: 2,
+        halfLifeHours: cfg.halfLifeHours ?? DEFAULT_CONFIG.halfLifeHours,
+        trendWindowHours: cfg.trendWindowHours ?? DEFAULT_CONFIG.trendWindowHours,
+        timeZone: cfg.timezone,
+        otherAgents: [],
+      });
+
+      if (!block) {
+        console.log("(no emotion context to inject — state is neutral/empty)");
+        return;
+      }
+      console.log(block);
+    });
+
+  // -----------------------------------------------------------------------
+  // modify
+  // -----------------------------------------------------------------------
+
+  root
+    .command("modify")
+    .description("Apply an emotion stimulus (updates dimensional + basic emotion state)")
+    .option("--agent <id>", "Agent ID", "main")
+    .requiredOption("--emotion <label>", "Emotion label (e.g. angry, happy, calm)")
+    .requiredOption("--intensity <0-1>", "Intensity 0-1", parseFloat)
+    .option("--trigger <text>", "What triggered the emotion", "CLI")
+    .action(async (opts: { agent?: string; emotion: string; intensity: number; trigger?: string }) => {
+      const manager = getManager(opts.agent ?? agentOpts());
+      let state = await manager.getState();
+      state = manager.applyStimulus(state, opts.emotion, opts.intensity, opts.trigger ?? "CLI");
+      await manager.saveState(state);
+      console.log(`Applied stimulus: ${opts.emotion} (${opts.intensity}) — ${opts.trigger ?? "CLI"}`);
+    });
+
+  // -----------------------------------------------------------------------
   // personality
   // -----------------------------------------------------------------------
 
   const personalityCmd = root
     .command("personality")
     .description("Show or set OCEAN personality traits")
-    .action(async () => {
+    .option("--agent <id>", "Agent ID", "main")
+    .action(async (opts: { agent?: string }) => {
+      const manager = getManager(opts.agent ?? agentOpts());
       const state = await manager.getState();
       console.log("OCEAN Personality Profile:");
       for (const trait of OCEAN_TRAITS) {
@@ -112,12 +175,14 @@ export function registerEmotionCli({ program, manager }: CliParams): void {
   personalityCmd
     .command("set")
     .description("Set a personality trait")
+    .option("--agent <id>", "Agent ID", "main")
     .requiredOption("--trait <name>", "OCEAN trait name")
     .requiredOption("--value <number>", "Trait value (0-1)", parseFloat)
-    .action(async (opts: { trait: string; value: number }) => {
+    .action(async (opts: { trait: string; value: number; agent?: string }) => {
       if (!OCEAN_TRAITS.includes(opts.trait as OCEANTrait)) {
         throw new Error(`Unknown trait "${opts.trait}". Valid: ${OCEAN_TRAITS.join(", ")}`);
       }
+      const manager = getManager(opts.agent ?? agentOpts());
       let state = await manager.getState();
       state = manager.setPersonalityTrait(state, opts.trait as OCEANTrait, opts.value);
       await manager.saveState(state);
@@ -131,10 +196,12 @@ export function registerEmotionCli({ program, manager }: CliParams): void {
   root
     .command("reset")
     .description("Reset emotional state to baseline")
+    .option("--agent <id>", "Agent ID", "main")
     .option("--dimensions <names>", "Comma-separated dimension names", (val: string) =>
       val.split(",").map((s) => s.trim()),
     )
-    .action(async (opts: { dimensions?: string[] }) => {
+    .action(async (opts: { dimensions?: string[]; agent?: string }) => {
+      const manager = getManager(opts.agent ?? agentOpts());
       let state = await manager.getState();
       const validDims = opts.dimensions?.filter((d) =>
         DIMENSION_NAMES.includes(d as DimensionName),
@@ -151,8 +218,10 @@ export function registerEmotionCli({ program, manager }: CliParams): void {
   root
     .command("history")
     .description("Show recent emotional stimuli")
+    .option("--agent <id>", "Agent ID", "main")
     .option("--limit <n>", "Max entries to show", "10")
-    .action(async (opts: { limit: string }) => {
+    .action(async (opts: { limit: string; agent?: string }) => {
+      const manager = getManager(opts.agent ?? agentOpts());
       const state = await manager.getState();
       const limit = parseInt(opts.limit, 10) || 10;
       const entries = state.recentStimuli.slice(0, limit);
@@ -176,14 +245,16 @@ export function registerEmotionCli({ program, manager }: CliParams): void {
   root
     .command("decay")
     .description("Configure decay rates")
+    .option("--agent <id>", "Agent ID", "main")
     .requiredOption("--dimension <name>", "Dimension name")
     .requiredOption("--rate <number>", "Decay rate (per hour)", parseFloat)
-    .action(async (opts: { dimension: string; rate: number }) => {
+    .action(async (opts: { dimension: string; rate: number; agent?: string }) => {
       if (!DIMENSION_NAMES.includes(opts.dimension as DimensionName)) {
         throw new Error(
           `Unknown dimension "${opts.dimension}". Valid: ${DIMENSION_NAMES.join(", ")}`,
         );
       }
+      const manager = getManager(opts.agent ?? agentOpts());
       let state = await manager.getState();
       state.decayRates[opts.dimension as DimensionName] = opts.rate;
       await manager.saveState(state);

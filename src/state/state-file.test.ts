@@ -15,7 +15,7 @@ describe("state-file", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "emotion-engine-test-"));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openfeelz-test-"));
   });
 
   afterEach(async () => {

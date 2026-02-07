@@ -4,7 +4,6 @@ import {
   mergeCustomMappings,
   validateTaxonomy,
 } from "./custom-taxonomy.js";
-import { getEmotionMapping, ALL_EMOTION_MAPPINGS } from "./mapping.js";
 
 describe("custom-taxonomy", () => {
   describe("createCustomMapping", () => {

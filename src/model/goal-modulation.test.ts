@@ -6,7 +6,6 @@ import {
 } from "./goal-modulation.js";
 import type { OCEANProfile } from "../types.js";
 import { createDefaultPersonality } from "./personality.js";
-import { createDefaultDimensionalState, createDefaultBasicEmotions } from "./emotion-model.js";
 
 describe("goal-modulation", () => {
   describe("inferGoals", () => {

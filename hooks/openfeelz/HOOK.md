@@ -1,5 +1,5 @@
 ---
-name: emotion-engine
+name: openfeelz
 description: "Inject PAD+Ekman emotional state into agent system prompt"
 metadata:
   {
@@ -11,18 +11,18 @@ metadata:
       },
   }
 ---
-# Emotion Engine Hook
+# OpenFeelz Hook
 
 Standalone workspace hook that injects emotional context into the agent's
 system prompt during bootstrap. This is the lightweight version -- for the
 full plugin with tool, CLI, dashboard, and MCP server, install the
-`@openclaw/emotion-engine` plugin instead.
+`openfeelz` plugin instead.
 
 ## Install
 
 ```bash
-cp -R hooks/emotion-engine <workspace>/hooks/
-openclaw hooks enable emotion-engine
+cp -R hooks/openfeelz <workspace>/hooks/
+openclaw hooks enable openfeelz
 ```
 
 ## Configuration

@@ -2,7 +2,7 @@
  * Standalone hook handler for workspace-level installation.
  *
  * This is a simplified version of the full plugin's bootstrap hook.
- * For the complete experience, install @openclaw/emotion-engine as a plugin.
+ * For the complete experience, install openfeelz as a plugin.
  */
 
 import os from "node:os";
@@ -18,7 +18,10 @@ export default async function handler(event: any) {
 
   const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(os.homedir(), ".openclaw");
   const agentId = event.context?.agentId ?? "main";
-  const statePath = path.join(stateDir, "agents", agentId, "agent", "emotion-engine.json");
+  const workspaceDir =
+    process.env.OPENCLAW_WORKSPACE ||
+    path.join(stateDir, agentId === "main" ? "workspace" : `workspace-${agentId}`);
+  const statePath = path.join(workspaceDir, "openfeelz.json");
 
   const config = {
     ...DEFAULT_CONFIG,

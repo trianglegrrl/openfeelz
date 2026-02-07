@@ -1,5 +1,5 @@
 /**
- * Migrate emotion-state-1 (v1) state files to emotion-engine (v2) format.
+ * Migrate emotion-state-1 (v1) state files to OpenFeelz (v2) format.
  *
  * Converts:
  *  - Flat NL labels -> emotion stimuli
