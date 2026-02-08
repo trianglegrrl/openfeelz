@@ -1,6 +1,6 @@
 {
   "name": "openfeelz",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "description": "PAD + Ekman + OCEAN emotional model plugin for OpenClaw agents",
   "type": "module",
   "main": "dist/index.js",
