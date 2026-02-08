@@ -47,12 +47,12 @@ describe("cli", () => {
     expect(cmd).toBeDefined();
   });
 
-  it("registers emotion configure subcommand", () => {
+  it("registers emotion wizard subcommand", () => {
     registerEmotionCli({ program, getManager });
     const emotionCmd = program.commands.find((c) => c.name() === "emotion");
     expect(emotionCmd).toBeDefined();
-    const configureCmd = emotionCmd!.commands.find((c) => c.name() === "configure");
-    expect(configureCmd).toBeDefined();
+    const wizardCmd = emotionCmd!.commands.find((c) => c.name() === "wizard");
+    expect(wizardCmd).toBeDefined();
   });
 
   describe("status", () => {

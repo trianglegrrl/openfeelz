@@ -10,16 +10,24 @@
  *   openclaw emotion reset [--dimensions <names>]
  *   openclaw emotion history [--limit <n>]
  *   openclaw emotion decay --dimension <name> --rate <n>
- *   openclaw emotion configure   Interactive wizard (presets or custom)
+ *   openclaw emotion wizard   Interactive wizard (presets or custom)
  */
 
 import { createRequire } from "node:module";
 import type { Command } from "commander";
 import type { OCEANTrait, DimensionName } from "../types.js";
 
+// Resolve version from package.json. In source (src/cli/) it's 2 levels up;
+// in compiled output (dist/src/cli/) it's 3 levels up. Try both.
 const require = createRequire(import.meta.url);
-const OPENFEELZ_VERSION: string =
-  (require("../../package.json") as { version?: string }).version ?? "0.0.0";
+let OPENFEELZ_VERSION = "0.0.0";
+try {
+  OPENFEELZ_VERSION = (require("../../package.json") as { version?: string }).version ?? "0.0.0";
+} catch {
+  try {
+    OPENFEELZ_VERSION = (require("../../../package.json") as { version?: string }).version ?? "0.0.0";
+  } catch { /* version stays 0.0.0 */ }
+}
 import { DEFAULT_CONFIG } from "../types.js";
 import { DIMENSION_NAMES, OCEAN_TRAITS } from "../types.js";
 import {
@@ -56,11 +64,11 @@ export function registerEmotionCli({
   const agentOpts = () => (root.opts() as { agent?: string }).agent ?? "main";
 
   // -----------------------------------------------------------------------
-  // configure (list first so it appears at top of help)
+  // wizard (list first so it appears at top of help; avoid "configure" - conflicts with openclaw configure)
   // -----------------------------------------------------------------------
 
   root
-    .command("configure")
+    .command("wizard")
     .description("Interactive configuration wizard (presets or custom)")
     .option("--agent <id>", "Agent ID", "main")
     .action(async (opts: { agent?: string }) => {

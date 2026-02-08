@@ -23,7 +23,7 @@ describe("personality-presets", () => {
       expect(presets).toHaveLength(10);
     });
 
-    it("each preset has id, name, shortDescription, ocean, and rationale", () => {
+    it("each preset has id, name, shortDescription, bio, ocean, traitDetails, and rationale", () => {
       const presets = listPresets();
       for (const p of presets) {
         expect(p.id).toBeDefined();
@@ -35,6 +35,9 @@ describe("personality-presets", () => {
         expect(p.shortDescription).toBeDefined();
         expect(typeof p.shortDescription).toBe("string");
         expect(p.shortDescription.length).toBeGreaterThan(0);
+        expect(p.bio).toBeDefined();
+        expect(typeof p.bio).toBe("string");
+        expect(p.bio.length).toBeGreaterThan(0);
         expect(p.ocean).toBeDefined();
         expect(typeof p.ocean).toBe("object");
         for (const trait of OCEAN_TRAITS) {
@@ -42,6 +45,13 @@ describe("personality-presets", () => {
           expect(typeof p.ocean[trait]).toBe("number");
           expect(p.ocean[trait]).toBeGreaterThanOrEqual(0);
           expect(p.ocean[trait]).toBeLessThanOrEqual(1);
+        }
+        expect(p.traitDetails).toBeDefined();
+        expect(typeof p.traitDetails).toBe("object");
+        for (const trait of OCEAN_TRAITS) {
+          expect(p.traitDetails[trait]).toBeDefined();
+          expect(typeof p.traitDetails[trait]).toBe("string");
+          expect(p.traitDetails[trait].length).toBeGreaterThan(0);
         }
         expect(p.rationale).toBeDefined();
         expect(typeof p.rationale).toBe("string");

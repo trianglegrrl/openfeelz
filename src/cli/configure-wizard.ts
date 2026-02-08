@@ -1,6 +1,6 @@
 /**
  * Interactive configuration wizard for OpenFeelz.
- * Uses @clack/prompts; run via `openclaw emotion configure`.
+ * Uses @clack/prompts; run via `openclaw emotion wizard`.
  */
 
 import { spawn } from "node:child_process";
@@ -68,11 +68,41 @@ export async function runConfigureWizard(ctx: ConfigureWizardContext): Promise<v
       if (presetChoice && typeof presetChoice === "string") {
         const preset = getPreset(presetChoice);
         if (preset) {
+          // Show detailed info about the selected personality
+          console.log("");
+          console.log(`  ${preset.name}`);
+          console.log(`  ${preset.bio}`);
+          console.log("");
+          console.log("  OCEAN Profile:");
+          const traitLabels = [
+            ["openness", "Openness"],
+            ["conscientiousness", "Conscientiousness"],
+            ["extraversion", "Extraversion"],
+            ["agreeableness", "Agreeableness"],
+            ["neuroticism", "Neuroticism"],
+          ] as const;
+          for (const [key, label] of traitLabels) {
+            const val = preset.ocean[key];
+            const bar = renderTraitBar(val);
+            const detail = preset.traitDetails[key] ?? "";
+            console.log(`    ${label.padEnd(20)} ${bar} ${val.toFixed(2)}  ${detail}`);
+          }
+          console.log("");
+
+          const applyIt = await confirm({
+            message: `Apply ${preset.name}'s personality profile?`,
+            initialValue: true,
+          });
+          if (isCancel(applyIt) || !applyIt) {
+            outro("Cancelled.");
+            return;
+          }
+
           const manager = ctx.getManager(ctx.agentId);
           let state = await manager.getState();
           state = applyPresetToState(state, preset.id);
           await manager.saveState(state);
-          console.log(`Applied preset: ${preset.name}`);
+          console.log(`\n  Applied preset: ${preset.name}`);
         }
       }
     }
@@ -153,4 +183,10 @@ export async function runConfigureWizard(ctx: ConfigureWizardContext): Promise<v
       throw err;
     }
   }
+}
+
+function renderTraitBar(value: number): string {
+  const width = 15;
+  const filled = Math.round(value * width);
+  return `[${"█".repeat(filled)}${"░".repeat(width - filled)}]`;
 }
