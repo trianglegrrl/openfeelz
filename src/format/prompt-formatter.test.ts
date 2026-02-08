@@ -153,7 +153,45 @@ describe("prompt-formatter", () => {
       expect(block).toContain("</dimensions>");
     });
 
-    it("includes user emotion entries", () => {
+    it("includes user emotion entries when includeUserEmotions is true", () => {
+      const state = buildEmptyState();
+      state.users["user1"] = {
+        history: [makeStimulus({ sourceRole: "user" })],
+        latest: makeStimulus({ sourceRole: "user" }),
+      };
+      const block = formatEmotionBlock(state, "user1", "agent1", {
+        maxUserEntries: 3,
+        maxAgentEntries: 2,
+        halfLifeHours: 12,
+        trendWindowHours: 24,
+        includeUserEmotions: true,
+      });
+      expect(block).toContain("<emotion_state>");
+      expect(block).toContain("<user>");
+      expect(block).toContain("happy");
+      expect(block).toContain("</emotion_state>");
+    });
+
+    it("excludes user emotions when includeUserEmotions is false", () => {
+      const state = buildEmptyState();
+      state.users["user1"] = {
+        history: [makeStimulus({ sourceRole: "user" })],
+        latest: makeStimulus({ sourceRole: "user" }),
+      };
+      const block = formatEmotionBlock(state, "user1", "agent1", {
+        maxUserEntries: 3,
+        maxAgentEntries: 2,
+        halfLifeHours: 12,
+        trendWindowHours: 24,
+        includeUserEmotions: false,
+      });
+      expect(block).toContain("<emotion_state>");
+      expect(block).toContain("<personality>");
+      expect(block).not.toContain("<user>");
+      expect(block).not.toContain("happy");
+    });
+
+    it("excludes user emotions when includeUserEmotions is omitted (default off)", () => {
       const state = buildEmptyState();
       state.users["user1"] = {
         history: [makeStimulus({ sourceRole: "user" })],
@@ -165,10 +203,7 @@ describe("prompt-formatter", () => {
         halfLifeHours: 12,
         trendWindowHours: 24,
       });
-      expect(block).toContain("<emotion_state>");
-      expect(block).toContain("<user>");
-      expect(block).toContain("happy");
-      expect(block).toContain("</emotion_state>");
+      expect(block).not.toContain("<user>");
     });
 
     it("includes agent emotion entries", () => {
@@ -216,8 +251,9 @@ describe("prompt-formatter", () => {
         maxAgentEntries: 2,
         halfLifeHours: 12,
         trendWindowHours: 24,
+        includeUserEmotions: true,
       });
-      // Should only contain 2 entries' worth of data
+      // Should only contain 2 user entries (no agent entries in this state)
       const matches = block.match(/Felt /g);
       expect(matches).toBeDefined();
       expect(matches!.length).toBeLessThanOrEqual(2);

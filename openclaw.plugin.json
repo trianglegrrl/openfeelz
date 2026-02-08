@@ -53,6 +53,16 @@
       "label": "Enable Emotion Context",
       "help": "Prepend emotional context to the agent system prompt at each turn"
     },
+    "includeUserEmotions": {
+      "label": "Include User Emotions in Context",
+      "help": "Include classified user/partner emotions in context (default: off due to classification quality)",
+      "advanced": true
+    },
+    "decayPreset": {
+      "label": "Decay Speed Preset",
+      "help": "Fast: emotions fade in ~1 hour (AI-style). Slow: human-like (~12h half-life). Custom: use per-dimension overrides.",
+      "advanced": true
+    },
     "decayServiceEnabled": {
       "label": "Background Decay Service",
       "help": "Run periodic decay even when no interaction occurs",
@@ -130,6 +140,8 @@
       "ruminationMaxStages": { "type": "integer", "minimum": 1, "maximum": 10 },
       "realtimeClassification": { "type": "boolean" },
       "contextEnabled": { "type": "boolean" },
+      "includeUserEmotions": { "type": "boolean" },
+      "decayPreset": { "type": "string", "enum": ["fast", "slow", "custom"] },
       "decayServiceEnabled": { "type": "boolean" },
       "decayServiceIntervalMinutes": { "type": "number", "minimum": 1 },
       "dashboardEnabled": { "type": "boolean" },

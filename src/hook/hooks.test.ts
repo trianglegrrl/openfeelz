@@ -45,7 +45,8 @@ describe("hooks", () => {
       state.dimensions.pleasure = 0.6;
       await manager.saveState(state);
 
-      const handler = createBootstrapHook(getManager, DEFAULT_CONFIG);
+      const configWithUserEmotions = { ...DEFAULT_CONFIG, includeUserEmotions: true };
+      const handler = createBootstrapHook(getManager, configWithUserEmotions);
       const event = { prompt: "Hello", userKey: "user1", agentId: "main" };
       const result = await handler(event);
 

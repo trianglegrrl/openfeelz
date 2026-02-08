@@ -292,6 +292,8 @@ export interface EmotionEngineConfig {
   ruminationMaxStages: number;
   realtimeClassification: boolean;
   contextEnabled: boolean;
+  /** Include user emotions in context injection (default: false due to classification quality). */
+  includeUserEmotions: boolean;
   decayServiceEnabled: boolean;
   decayServiceIntervalMinutes: number;
   dashboardEnabled: boolean;
@@ -299,6 +301,8 @@ export interface EmotionEngineConfig {
   maxOtherAgents: number;
   emotionLabels: string[];
   personality: OCEANProfile;
+  /** Decay speed preset: fast (~1h half-life) or slow (human-like). Custom uses decayRateOverrides. */
+  decayPreset: "fast" | "slow" | "custom";
   decayRateOverrides: Partial<Record<DimensionName, number>>;
   dimensionBaselineOverrides: Partial<DimensionalState>;
 }
@@ -316,6 +320,7 @@ export const DEFAULT_CONFIG: EmotionEngineConfig = {
   ruminationMaxStages: 4,
   realtimeClassification: false,
   contextEnabled: true,
+  includeUserEmotions: false,
   decayServiceEnabled: false,
   decayServiceIntervalMinutes: 30,
   dashboardEnabled: true,
@@ -350,6 +355,7 @@ export const DEFAULT_CONFIG: EmotionEngineConfig = {
     agreeableness: 0.5,
     neuroticism: 0.5,
   },
+  decayPreset: "slow",
   decayRateOverrides: {},
   dimensionBaselineOverrides: {},
 };

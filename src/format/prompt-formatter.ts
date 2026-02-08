@@ -133,6 +133,8 @@ export interface FormatOptions {
   trendWindowHours: number;
   timeZone?: string;
   otherAgents?: Array<{ id: string; latest: EmotionStimulus }>;
+  /** Include user emotions in context (default: false). */
+  includeUserEmotions?: boolean;
 }
 
 /**
@@ -210,7 +212,7 @@ export function formatEmotionBlock(
   }
 
   // User emotions (recent emotional expressions from conversation partner)
-  if (userEntries.length > 0) {
+  if (options.includeUserEmotions === true && userEntries.length > 0) {
     lines.push("  <!-- User emotions (recent partner expressions) -->");
     lines.push("  <user>");
     for (const entry of userEntries) {

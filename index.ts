@@ -60,6 +60,7 @@ function resolveConfig(raw?: Record<string, unknown>): EmotionEngineConfig {
     ruminationMaxStages: (raw?.ruminationMaxStages as number) ?? DEFAULT_CONFIG.ruminationMaxStages,
     realtimeClassification: (raw?.realtimeClassification as boolean) ?? DEFAULT_CONFIG.realtimeClassification,
     contextEnabled: (raw?.contextEnabled as boolean) ?? DEFAULT_CONFIG.contextEnabled,
+    includeUserEmotions: (raw?.includeUserEmotions as boolean) ?? DEFAULT_CONFIG.includeUserEmotions,
     decayServiceEnabled: (raw?.decayServiceEnabled as boolean) ?? DEFAULT_CONFIG.decayServiceEnabled,
     decayServiceIntervalMinutes: (raw?.decayServiceIntervalMinutes as number) ?? DEFAULT_CONFIG.decayServiceIntervalMinutes,
     dashboardEnabled: (raw?.dashboardEnabled as boolean) ?? DEFAULT_CONFIG.dashboardEnabled,
@@ -73,6 +74,8 @@ function resolveConfig(raw?: Record<string, unknown>): EmotionEngineConfig {
       agreeableness: personality.agreeableness ?? DEFAULT_CONFIG.personality.agreeableness,
       neuroticism: personality.neuroticism ?? DEFAULT_CONFIG.personality.neuroticism,
     },
+    decayPreset:
+      (raw?.decayPreset as "fast" | "slow" | "custom") ?? DEFAULT_CONFIG.decayPreset,
     decayRateOverrides: (raw?.decayRates as Record<string, number>) ?? {},
     dimensionBaselineOverrides: (raw?.dimensionBaselines as Record<string, number>) ?? {},
   };

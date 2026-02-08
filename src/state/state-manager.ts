@@ -41,6 +41,7 @@ import {
   acquireLock,
   releaseLock,
 } from "./state-file.js";
+import { getEffectiveDecayRates } from "../config/decay-presets.js";
 
 /** Scale factor for rumination decay per stage. */
 const RUMINATION_DECAY_FACTOR = 0.8;
@@ -91,15 +92,20 @@ export class StateManager {
 
     if (elapsedHours <= 0) return { ...state };
 
+    const { dimensionRates, emotionDecayRates } = getEffectiveDecayRates(
+      state,
+      this.config,
+    );
+
     const dimensions = decayDimensions(
       state.dimensions,
       state.baseline,
-      state.decayRates,
+      dimensionRates,
       elapsedHours,
     );
     const basicEmotions = decayBasicEmotions(
       state.basicEmotions,
-      state.emotionDecayRates,
+      emotionDecayRates,
       elapsedHours,
     );
 

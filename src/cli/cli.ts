@@ -9,12 +9,14 @@
  *   openclaw emotion personality set --trait <name> --value <n>
  *   openclaw emotion reset [--dimensions <names>]
  *   openclaw emotion history [--limit <n>]
- *   openclaw emotion decay --dimension <name> --rate <n>
+ *   openclaw emotion decay [fast|slow]   Set decay preset (or use --dimension/--rate for custom)
  *   openclaw emotion wizard   Interactive wizard (presets or custom)
  */
 
 import { createRequire } from "node:module";
+import { spawn } from "node:child_process";
 import type { Command } from "commander";
+import { backupOpenClawConfigOnce } from "./backup-openclaw-config.js";
 import type { OCEANTrait, DimensionName } from "../types.js";
 
 // Resolve version from package.json. In source (src/cli/) it's 2 levels up;
@@ -45,6 +47,8 @@ interface CliParams {
   config?: Partial<EmotionEngineConfig>;
   workspaceDir?: string;
   openclawConfig?: unknown;
+  /** When set, decay preset (fast/slow) uses this instead of spawning openclaw (for tests). */
+  setPluginConfig?: (path: string, value: unknown) => void | Promise<void>;
 }
 
 export function registerEmotionCli({
@@ -53,6 +57,7 @@ export function registerEmotionCli({
   config,
   workspaceDir,
   openclawConfig,
+  setPluginConfig,
 }: CliParams): void {
   const root = program
     .command("emotion")
@@ -170,6 +175,7 @@ export function registerEmotionCli({
         trendWindowHours: cfg.trendWindowHours ?? DEFAULT_CONFIG.trendWindowHours,
         timeZone: cfg.timezone,
         otherAgents: [],
+        includeUserEmotions: cfg.includeUserEmotions ?? DEFAULT_CONFIG.includeUserEmotions,
       });
 
       if (!block) {
@@ -288,21 +294,56 @@ export function registerEmotionCli({
 
   root
     .command("decay")
-    .description("Configure decay rates")
+    .description("Set decay preset (fast or slow) or configure a single dimension rate")
+    .argument("[preset]", "Preset: fast (~1h half-life) or slow (human-like)")
     .option("--agent <id>", "Agent ID", "main")
-    .requiredOption("--dimension <name>", "Dimension name")
-    .requiredOption("--rate <number>", "Decay rate (per hour)", parseFloat)
-    .action(async (opts: { dimension: string; rate: number; agent?: string }) => {
-      if (!DIMENSION_NAMES.includes(opts.dimension as DimensionName)) {
-        throw new Error(
-          `Unknown dimension "${opts.dimension}". Valid: ${DIMENSION_NAMES.join(", ")}`,
-        );
+    .option("--dimension <name>", "Dimension name (required when not using preset)")
+    .option("--rate <number>", "Decay rate per hour (required when not using preset)", parseFloat)
+    .action(async function (this: Command, presetArg: string | undefined) {
+      const opts = this.opts() as { dimension?: string; rate?: number; agent?: string };
+      const preset = presetArg?.toLowerCase();
+
+      if (preset === "fast" || preset === "slow") {
+        if (setPluginConfig) {
+          await Promise.resolve(setPluginConfig("decayPreset", preset));
+        } else {
+          const backupPath = await backupOpenClawConfigOnce();
+          if (backupPath) {
+            console.log(`[openfeelz] Backed up config to ${backupPath}`);
+          }
+          const valStr = JSON.stringify(preset);
+          const child = spawn("openclaw", [
+            "config",
+            "set",
+            "plugins.entries.openfeelz.config.decayPreset",
+            valStr,
+          ], { stdio: "inherit", shell: true });
+          await new Promise<void>((resolve, reject) => {
+            child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`config set exited ${code}`))));
+            child.on("error", reject);
+          });
+        }
+        console.log(`Decay preset set to ${preset}.`);
+        return;
       }
-      const manager = getManager(opts.agent ?? agentOpts());
-      let state = await manager.getState();
-      state.decayRates[opts.dimension as DimensionName] = opts.rate;
-      await manager.saveState(state);
-      console.log(`Set ${opts.dimension} decay rate to ${opts.rate}/hr`);
+
+      if (opts.dimension != null && opts.rate != null) {
+        if (!DIMENSION_NAMES.includes(opts.dimension as DimensionName)) {
+          this.error(
+            `Unknown dimension "${opts.dimension}". Valid: ${DIMENSION_NAMES.join(", ")}`,
+          );
+        }
+        const manager = getManager(opts.agent ?? agentOpts());
+        let state = await manager.getState();
+        state.decayRates[opts.dimension as DimensionName] = opts.rate;
+        await manager.saveState(state);
+        console.log(`Set ${opts.dimension} decay rate to ${opts.rate}/hr`);
+        return;
+      }
+
+      this.error(
+        "Provide a preset (fast or slow) or both --dimension and --rate. Example: openclaw emotion decay fast",
+      );
     });
 
 }

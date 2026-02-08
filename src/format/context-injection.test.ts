@@ -83,6 +83,7 @@ describe("context injection lifecycle", () => {
         maxAgentEntries: 2,
         halfLifeHours: 12,
         trendWindowHours: 24,
+        includeUserEmotions: true,
       });
 
       // Must start and end with the XML tags
@@ -100,7 +101,7 @@ describe("context injection lifecycle", () => {
       expect(block).toContain("baseline:");
       expect(block).toContain("</dimensions>");
 
-      // Must contain user section with natural-language entries
+      // Must contain user section with natural-language entries (when enabled)
       expect(block).toContain("<user>");
       expect(block).toMatch(/Felt \w+ happy because/);
       expect(block).toContain("project completed successfully.");
@@ -139,6 +140,7 @@ describe("context injection lifecycle", () => {
         maxAgentEntries: 2,
         halfLifeHours: 12,
         trendWindowHours: 24,
+        includeUserEmotions: true,
       });
 
       // Trend should reflect the dominant emotion (frustrated, since it's more recent and more intense)
@@ -280,13 +282,14 @@ describe("context injection lifecycle", () => {
       await writeStateFile(statePath, { ...state, lastUpdated: sixHoursAgo });
 
       // 3. Bootstrap hook runs (simulating the agent waking up)
-      const hook = createBootstrapHook(() => manager, DEFAULT_CONFIG);
+      const configWithUserEmotions = { ...DEFAULT_CONFIG, includeUserEmotions: true };
+      const hook = createBootstrapHook(() => manager, configWithUserEmotions);
       const result = await hook({ prompt: "Hello", userKey: "alice", agentId: "main" });
 
       expect(result).toBeDefined();
       expect(result!.prependContext).toContain("<emotion_state>");
 
-      // 4. The injected block should mention the user's anger
+      // 4. The injected block should mention the user's anger (when user emotions are enabled)
       expect(result!.prependContext).toContain("angry");
       expect(result!.prependContext).toContain("rude customer");
 
@@ -326,8 +329,9 @@ describe("context injection lifecycle", () => {
 
       await manager.saveState(state);
 
-      // Bootstrap should show trend as "mostly frustrated"
-      const hook = createBootstrapHook(() => manager, DEFAULT_CONFIG);
+      // Bootstrap should show trend as "mostly frustrated" (when user emotions enabled)
+      const configWithUserEmotions = { ...DEFAULT_CONFIG, includeUserEmotions: true };
+      const hook = createBootstrapHook(() => manager, configWithUserEmotions);
       const result = await hook({ prompt: "Hi", userKey: "bob", agentId: "main" });
 
       expect(result).toBeDefined();

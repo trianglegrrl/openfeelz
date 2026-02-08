@@ -84,6 +84,7 @@ export function createBootstrapHook(
         trendWindowHours: config.trendWindowHours,
         timeZone: config.timezone,
         otherAgents,
+        includeUserEmotions: config.includeUserEmotions,
       });
 
       if (!block) return undefined;

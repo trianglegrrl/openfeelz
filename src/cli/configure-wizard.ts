@@ -8,6 +8,7 @@ import type { PersonalityPreset } from "../config/personality-presets.js";
 import type { StateManager } from "../state/state-manager.js";
 import type { EmotionEngineConfig } from "../types.js";
 import { DEFAULT_CONFIG } from "../types.js";
+import { backupOpenClawConfigOnce } from "./backup-openclaw-config.js";
 import { validateConfigNumber } from "./configure-validation.js";
 
 export interface ConfigureWizardContext {
@@ -18,7 +19,11 @@ export interface ConfigureWizardContext {
   workspaceDir?: string;
 }
 
-function runOpenClawConfigSet(path: string, value: string | number | boolean): Promise<boolean> {
+async function runOpenClawConfigSet(path: string, value: string | number | boolean): Promise<boolean> {
+  const backupPath = await backupOpenClawConfigOnce();
+  if (backupPath) {
+    console.log(`[openfeelz] Backed up config to ${backupPath}`);
+  }
   return new Promise((resolve) => {
     const valStr = typeof value === "string" ? value : JSON.stringify(value);
     const child = spawn("openclaw", ["config", "set", `plugins.entries.openfeelz.config.${path}`, valStr], {
@@ -145,8 +150,29 @@ export async function runConfigureWizard(ctx: ConfigureWizardContext): Promise<v
         else console.log("Tip: run openclaw config set plugins.entries.openfeelz.config.model \"<model>\" to save.");
       }
 
+      const decayPresetChoice = await select({
+        message: "Decay speed: how quickly emotions fade toward baseline",
+        options: [
+          {
+            value: "fast",
+            label: "Fast (AI-style) — emotions fade in ~1 hour",
+            hint: "Good for fast-turnaround or model-only use",
+          },
+          {
+            value: "slow",
+            label: "Slow (human-like) — ~12h half-life",
+            hint: "Emotions linger longer, more human-like",
+          },
+        ],
+        initialValue: (current.decayPreset as string) ?? "slow",
+      });
+      if (!isCancel(decayPresetChoice)) {
+        const ok = await runOpenClawConfigSet("decayPreset", decayPresetChoice);
+        if (ok) configChanged = true;
+      }
+
       const halfLifeStr = await text({
-        message: "Decay half-life (hours)",
+        message: "Decay half-life (hours) — used for context trend window",
         placeholder: String((current.halfLifeHours as number) ?? DEFAULT_CONFIG.halfLifeHours),
         defaultValue: String((current.halfLifeHours as number) ?? DEFAULT_CONFIG.halfLifeHours),
       });

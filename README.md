@@ -26,7 +26,7 @@ Most agents vibes-check each message independently and forget everything between
 - **LLM Classification** -- Automatically classify user/agent emotions via OpenAI-compatible models
 - **Web Dashboard** -- Glassmorphism UI at `/emotion-dashboard`
 - **MCP Server** -- Expose emotional state to Cursor, Claude Desktop, etc.
-- **CLI Tools** -- `openclaw emotion status`, `reset`, `personality`, `history`, `decay`, **`configure`** (interactive wizard)
+- **CLI Tools** -- `openclaw emotion status`, `reset`, `personality`, `history`, `decay` (preset or per-dimension), **`wizard`** (interactive configuration)
 
 ## Installation
 
@@ -98,7 +98,7 @@ The plugin prepends an `<emotion_state>` block to the system prompt:
 ```
 
 - **`<dimensions>`** -- PAD dimensions that deviate >0.15 from personality baseline
-- **`<user>`** -- Last 3 classified user emotions with timestamps, intensity, and triggers
+- **`<user>`** -- Last 3 classified user emotions with timestamps, intensity, and triggers (optional; set `includeUserEmotions: true` to include; default off due to classification quality)
 - **`<agent>`** -- Last 2 agent emotions (continuity across turns)
 - **`<others>`** -- Other agents' recent emotional states (up to `maxOtherAgents`)
 
@@ -150,11 +150,12 @@ Decay is computed on-demand, not on a timer:
 
 ### Configuring Decay
 
-Three levels of control:
+Four levels of control:
 
-- **Global half-life** -- `halfLifeHours: 6` makes everything fade 2x faster
-- **Per-dimension overrides** -- `"decayRates": { "pleasure": 0.1, "trust": 0.02 }`
-- **Personality-driven** -- Change OCEAN traits and rates recalculate automatically
+- **Decay preset** -- `decayPreset: "fast"` (~1h half-life, AI-style) or `"slow"` (human-like, default). Set via config or CLI: `openclaw emotion decay fast` / `openclaw emotion decay slow`.
+- **Global half-life** -- `halfLifeHours: 6` (used for context trend window; preset controls actual decay rates).
+- **Per-dimension overrides** -- `"decayRates": { "pleasure": 0.1, "trust": 0.02 }` when using `decayPreset: "slow"` or `"custom"`.
+- **Personality-driven** -- With `slow`/`custom`, OCEAN traits influence baselines and rates; change traits and rates recalculate automatically.
 
 ## Configuration
 
@@ -216,6 +217,8 @@ Also configurable via the OpenClaw web UI.
 | `ruminationMaxStages` | number | `4` | Max rumination stages |
 | `realtimeClassification` | boolean | `false` | Classify on every message |
 | `contextEnabled` | boolean | `true` | Prepend emotion context to prompt |
+| `includeUserEmotions` | boolean | `false` | Include user/partner emotions in context block (default off due to classification quality) |
+| `decayPreset` | `"fast"` \| `"slow"` \| `"custom"` | `"slow"` | Decay speed: fast (~1h half-life) or slow (human-like); custom uses `decayRates` overrides |
 | `decayServiceEnabled` | boolean | `false` | Background decay service |
 | `decayServiceIntervalMinutes` | number | `30` | Decay service interval |
 | `dashboardEnabled` | boolean | `true` | Serve web dashboard |
@@ -249,18 +252,22 @@ openclaw emotion personality set --trait openness --value 0.8
 openclaw emotion reset               # Reset all to baseline
 openclaw emotion reset --dimensions pleasure,arousal
 openclaw emotion history --limit 20  # Recent stimuli
-openclaw emotion decay --dimension pleasure --rate 0.05
-openclaw emotion configure           # Interactive configuration wizard (see below)
+openclaw emotion decay fast         # Set decay preset to fast (~1h half-life)
+openclaw emotion decay slow         # Set decay preset to slow (human-like, default)
+openclaw emotion decay --dimension pleasure --rate 0.05   # Per-dimension override (when not using preset)
+openclaw emotion wizard             # Interactive configuration wizard (see below)
 ```
 
-### Configuration wizard: `openclaw emotion configure`
+### Configuration wizard: `openclaw emotion wizard`
 
-The **configuration wizard** is the CLI option for guided setup. It runs an interactive (TUI-style) flow where you can:
+The **configuration wizard** is the CLI option for guided setup. Run **`openclaw emotion wizard`**. It runs an interactive (TUI-style) flow where you can:
 
-- **a) Choose a preset** — Pick one of 10 famous-personality presets (OCEAN profiles based on biographical research). Each option is listed with a short explanation. The wizard applies that preset’s personality to your agent’s state.
-- **b) Customize** — Skip presets and go straight to custom settings, or after picking a preset you can optionally configure model, decay half-life, rumination, context injection, and dashboard.
+- **a) Choose a personality preset** — Pick one of 10 famous-personality presets (OCEAN profiles based on biographical research). Each option is listed with a short explanation. The wizard applies that preset’s personality to your agent’s state.
+- **b) Customize** — Skip presets and go straight to custom settings, or after picking a preset you can optionally configure:
+  - **Decay speed** — Fast (AI-style, emotions fade in ~1 hour) or Slow (human-like, ~12h half-life).
+  - **Model**, decay half-life (trend window), rumination, context injection, and dashboard.
 
-So: run **`openclaw emotion configure`** to open the wizard; it will ask whether you want a **preset** (with explanations) or **custom**, then optionally walk through key config fields with validation and help text.
+So: run **`openclaw emotion wizard`** to open the wizard; it will ask whether you want a **preset** (with explanations) or **custom**, then optionally walk through key config fields including decay speed, with validation and help text.
 
 #### Default personalities in the picker
 

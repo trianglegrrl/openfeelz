@@ -147,4 +147,37 @@ describe("cli", () => {
       expect(text).toContain("dimensions");
     });
   });
+
+  describe("decay", () => {
+    it("decay fast sets preset without requiring --dimension or --rate", async () => {
+      const setPluginConfig = vi.fn<[string, unknown], void>();
+      registerEmotionCli({ program, getManager, setPluginConfig });
+      await run("emotion", "decay", "fast");
+      expect(setPluginConfig).toHaveBeenCalledWith("decayPreset", "fast");
+      expect(output.join(" ")).toContain("Decay preset set to fast");
+    });
+
+    it("decay slow sets preset", async () => {
+      const setPluginConfig = vi.fn<[string, unknown], void>();
+      registerEmotionCli({ program, getManager, setPluginConfig });
+      await run("emotion", "decay", "slow");
+      expect(setPluginConfig).toHaveBeenCalledWith("decayPreset", "slow");
+      expect(output.join(" ")).toContain("Decay preset set to slow");
+    });
+
+    it("decay with --dimension and --rate updates state", async () => {
+      registerEmotionCli({ program, getManager });
+      await run("emotion", "decay", "--dimension", "pleasure", "--rate", "0.1");
+      const state = await manager.getState();
+      expect(state.decayRates.pleasure).toBe(0.1);
+      expect(output.join(" ")).toContain("Set pleasure decay rate to 0.1/hr");
+    });
+
+    it("decay without preset or --dimension/--rate throws", async () => {
+      registerEmotionCli({ program, getManager });
+      await expect(run("emotion", "decay")).rejects.toThrow(
+        /Provide a preset \(fast or slow\) or both --dimension and --rate/,
+      );
+    });
+  });
 });
