@@ -12,7 +12,7 @@ import type {
   EmotionEngineState,
   EmotionStimulus,
 } from "../types.js";
-import { DIMENSION_NAMES } from "../types.js";
+import { BASIC_EMOTION_NAMES, DIMENSION_NAMES, OCEAN_TRAITS } from "../types.js";
 
 // ---------------------------------------------------------------------------
 // Formatting Helpers
@@ -152,28 +152,66 @@ export function formatEmotionBlock(
   const agentEntries = agentBucket?.history?.slice(0, options.maxAgentEntries) ?? [];
   const otherAgents = options.otherAgents ?? [];
 
-  // Check if there's anything to show
-  const dimSummary = formatDimensionSummary(state.dimensions, state.baseline);
-  if (
-    userEntries.length === 0 &&
-    agentEntries.length === 0 &&
-    otherAgents.length === 0 &&
-    !dimSummary
-  ) {
-    return "";
-  }
-
   const lines: string[] = ["<emotion_state>"];
 
-  // Dimensional context
-  if (dimSummary) {
+  // Primary emotion (most salient current state)
+  const emotionalState = state.cachedAnalysis?.emotionalState;
+  if (emotionalState?.primary != null) {
+    lines.push("  <!-- Primary emotion (most salient current state) -->");
+    lines.push("  <primary>");
+    lines.push(
+      `    ${emotionalState.primary} (intensity: ${emotionalState.intensity.toFixed(2)})`,
+    );
+    lines.push("  </primary>");
+  }
+
+  // OCEAN personality traits (explains baseline tendencies and resting states)
+  const personalityTraits = OCEAN_TRAITS.map(
+    (t) => `${t}: ${state.personality[t].toFixed(2)}`,
+  ).join(", ");
+  lines.push("  <!-- OCEAN personality traits (baseline tendencies) -->");
+  lines.push("  <personality>");
+  lines.push(`    ${personalityTraits}`);
+  lines.push("  </personality>");
+
+  // Dimensional state (current values vs personality-influenced baselines)
+  const dimDeviations: string[] = [];
+  for (const name of DIMENSION_NAMES) {
+    const val = state.dimensions[name];
+    const base = state.baseline[name];
+    const delta = val - base;
+    if (Math.abs(delta) >= 0.15) {
+      const direction = delta > 0 ? "elevated" : "lowered";
+      dimDeviations.push(
+        `${name}: ${direction} (${val.toFixed(2)}, baseline: ${base.toFixed(2)})`,
+      );
+    }
+  }
+  if (dimDeviations.length > 0) {
+    lines.push("  <!-- Dimensional state (deviations from baseline) -->");
     lines.push("  <dimensions>");
-    lines.push(`    ${dimSummary}`);
+    for (const line of dimDeviations) {
+      lines.push(`    ${line}`);
+    }
     lines.push("  </dimensions>");
   }
 
-  // User emotions
+  // Basic emotions (Ekman's 6, intensities above threshold)
+  const basicEmotionsAboveThreshold = BASIC_EMOTION_NAMES.filter(
+    (name) => state.basicEmotions[name] > 0.01,
+  );
+  if (basicEmotionsAboveThreshold.length > 0) {
+    lines.push("  <!-- Basic emotions (Ekman, above threshold) -->");
+    lines.push("  <basic_emotions>");
+    for (const name of basicEmotionsAboveThreshold) {
+      lines.push(`    ${name}: ${state.basicEmotions[name].toFixed(2)}`);
+    }
+    lines.push("  </basic_emotions>");
+  }
+
+  // User emotions (recent emotional expressions from conversation partner)
   if (userEntries.length > 0) {
+    lines.push("  <!-- User emotions (recent partner expressions) -->");
     lines.push("  <user>");
     for (const entry of userEntries) {
       lines.push(`    ${formatEntry(entry, options.timeZone)}`);
@@ -192,8 +230,9 @@ export function formatEmotionBlock(
     lines.push("  </user>");
   }
 
-  // Agent emotions
+  // Agent emotions (self-classified expressions)
   if (agentEntries.length > 0) {
+    lines.push("  <!-- Agent emotions (self-classified) -->");
     lines.push("  <agent>");
     for (const entry of agentEntries) {
       lines.push(`    ${formatEntry(entry, options.timeZone)}`);
@@ -212,8 +251,9 @@ export function formatEmotionBlock(
     lines.push("  </agent>");
   }
 
-  // Other agents
+  // Other agents (multi-agent contexts)
   if (otherAgents.length > 0) {
+    lines.push("  <!-- Other agents (multi-agent) -->");
     lines.push("  <others>");
     for (const other of otherAgents) {
       lines.push(

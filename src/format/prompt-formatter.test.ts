@@ -55,7 +55,7 @@ describe("prompt-formatter", () => {
   });
 
   describe("formatEmotionBlock", () => {
-    it("returns empty string when no data", () => {
+    it("includes personality block even when no other data (never empty)", () => {
       const state = buildEmptyState();
       const block = formatEmotionBlock(state, "user1", "agent1", {
         maxUserEntries: 3,
@@ -63,7 +63,94 @@ describe("prompt-formatter", () => {
         halfLifeHours: 12,
         trendWindowHours: 24,
       });
-      expect(block).toBe("");
+      expect(block).not.toBe("");
+      expect(block).toContain("<emotion_state>");
+      expect(block).toContain("<personality>");
+      expect(block).toContain("openness:");
+      expect(block).toContain("</personality>");
+    });
+
+    it("includes primary emotion when cachedAnalysis.emotionalState exists", () => {
+      const state = buildEmptyState();
+      state.cachedAnalysis = {
+        emotionalState: {
+          summary: "Generally calm.",
+          generatedAt: new Date().toISOString(),
+          primary: "calm",
+          intensity: 0.6,
+          notes: [],
+        },
+      };
+      const block = formatEmotionBlock(state, "user1", "agent1", {
+        maxUserEntries: 3,
+        maxAgentEntries: 2,
+        halfLifeHours: 12,
+        trendWindowHours: 24,
+      });
+      expect(block).toContain("<primary>");
+      expect(block).toContain("calm");
+      expect(block).toContain("intensity: 0.60");
+      expect(block).toContain("</primary>");
+    });
+
+    it("omits primary when no cached analysis", () => {
+      const state = buildEmptyState();
+      const block = formatEmotionBlock(state, "user1", "agent1", {
+        maxUserEntries: 3,
+        maxAgentEntries: 2,
+        halfLifeHours: 12,
+        trendWindowHours: 24,
+      });
+      expect(block).not.toContain("<primary>");
+    });
+
+    it("includes basic_emotions when any above threshold", () => {
+      const state = buildEmptyState();
+      state.basicEmotions.happiness = 0.45;
+      state.basicEmotions.anger = 0.12;
+      const block = formatEmotionBlock(state, "user1", "agent1", {
+        maxUserEntries: 3,
+        maxAgentEntries: 2,
+        halfLifeHours: 12,
+        trendWindowHours: 24,
+      });
+      expect(block).toContain("<basic_emotions>");
+      expect(block).toContain("happiness: 0.45");
+      expect(block).toContain("anger: 0.12");
+      expect(block).toContain("</basic_emotions>");
+    });
+
+    it("omits basic_emotions when all below threshold", () => {
+      const state = buildEmptyState();
+      state.basicEmotions.happiness = 0.01;
+      state.basicEmotions.sadness = 0.005;
+      const block = formatEmotionBlock(state, "user1", "agent1", {
+        maxUserEntries: 3,
+        maxAgentEntries: 2,
+        halfLifeHours: 12,
+        trendWindowHours: 24,
+      });
+      expect(block).not.toContain("<basic_emotions>");
+    });
+
+    it("dimensions section shows baseline values for deviations", () => {
+      const state = buildEmptyState();
+      state.dimensions.pleasure = 0.6;
+      state.baseline.pleasure = 0.05;
+      state.dimensions.curiosity = 0.8;
+      state.baseline.curiosity = 0.5;
+      const block = formatEmotionBlock(state, "user1", "agent1", {
+        maxUserEntries: 3,
+        maxAgentEntries: 2,
+        halfLifeHours: 12,
+        trendWindowHours: 24,
+      });
+      expect(block).toContain("<dimensions>");
+      expect(block).toContain("pleasure:");
+      expect(block).toContain("elevated");
+      expect(block).toContain("baseline: 0.05");
+      expect(block).toContain("baseline: 0.50");
+      expect(block).toContain("</dimensions>");
     });
 
     it("includes user emotion entries", () => {

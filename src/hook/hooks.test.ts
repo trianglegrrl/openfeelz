@@ -55,13 +55,16 @@ describe("hooks", () => {
       expect(result!.prependContext).toContain("happy");
     });
 
-    it("returns undefined when no emotion data exists", async () => {
+    it("returns prependContext with at least personality when no stimuli", async () => {
       const handler = createBootstrapHook(getManager, DEFAULT_CONFIG);
       const event = { prompt: "Hello", userKey: "user1", agentId: "main" };
       const result = await handler(event);
 
-      // Empty state, no entries, no dimension deviations
-      expect(result).toBeUndefined();
+      // Empty state still gets personality block (never undefined)
+      expect(result).toBeDefined();
+      expect(result!.prependContext).toContain("<emotion_state>");
+      expect(result!.prependContext).toContain("<personality>");
+      expect(result!.prependContext).toContain("openness:");
     });
 
     it("applies decay before formatting", async () => {

@@ -4,6 +4,7 @@
  */
 
 import { spawn } from "node:child_process";
+import type { PersonalityPreset } from "../config/personality-presets.js";
 import type { StateManager } from "../state/state-manager.js";
 import type { EmotionEngineConfig } from "../types.js";
 import { DEFAULT_CONFIG } from "../types.js";
@@ -57,9 +58,14 @@ export async function runConfigureWizard(ctx: ConfigureWizardContext): Promise<v
     if (choice === "preset") {
       const { listPresets, getPreset, applyPresetToState } = await import("../config/personality-presets.js");
       const presets = listPresets();
+      console.log("\n" + formatPresetTable(presets) + "\n");
       const presetChoice = await select({
-        message: "Select a personality preset",
-        options: presets.map((p) => ({ value: p.id, label: `${p.name} — ${p.shortDescription}` })),
+        message: "Select a personality preset (arrow keys to preview OCEAN scores)",
+        options: presets.map((p) => ({
+          value: p.id,
+          label: `${p.name} — ${p.shortDescription}`,
+          hint: formatPresetHint(p),
+        })),
       });
       if (isCancel(presetChoice)) {
         outro("Cancelled.");
@@ -189,4 +195,40 @@ function renderTraitBar(value: number): string {
   const width = 15;
   const filled = Math.round(value * width);
   return `[${"█".repeat(filled)}${"░".repeat(width - filled)}]`;
+}
+
+const NAME_WIDTH = 26;
+const COL_WIDTH = 5;
+
+/**
+ * Format presets as a printable table with Name and O C E A N columns.
+ * Exported for tests.
+ */
+export function formatPresetTable(presets: readonly PersonalityPreset[]): string {
+  const sep = "  " + "─".repeat(NAME_WIDTH + COL_WIDTH * 5 + 4);
+  const lines: string[] = [
+    "  Personality Presets:",
+    sep,
+    `  ${"Name".padEnd(NAME_WIDTH)}  O     C     E     A     N`,
+    sep,
+  ];
+  for (const p of presets) {
+    const name = p.name.slice(0, NAME_WIDTH).padEnd(NAME_WIDTH);
+    const o = p.ocean.openness.toFixed(2).padStart(4);
+    const c = p.ocean.conscientiousness.toFixed(2).padStart(4);
+    const e = p.ocean.extraversion.toFixed(2).padStart(4);
+    const a = p.ocean.agreeableness.toFixed(2).padStart(4);
+    const n = p.ocean.neuroticism.toFixed(2).padStart(4);
+    lines.push(`  ${name}  ${o}  ${c}  ${e}  ${a}  ${n}`);
+  }
+  lines.push(sep);
+  return lines.join("\n");
+}
+
+/**
+ * Format a one-line hint for select option (O:0.95 C:0.70 ...).
+ * Exported for tests.
+ */
+export function formatPresetHint(preset: PersonalityPreset): string {
+  return `O:${preset.ocean.openness.toFixed(2)} C:${preset.ocean.conscientiousness.toFixed(2)} E:${preset.ocean.extraversion.toFixed(2)} A:${preset.ocean.agreeableness.toFixed(2)} N:${preset.ocean.neuroticism.toFixed(2)}`;
 }

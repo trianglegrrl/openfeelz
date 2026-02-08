@@ -127,10 +127,13 @@ describe("cli", () => {
   });
 
   describe("context", () => {
-    it("outputs empty message when state is neutral", async () => {
+    it("outputs personality block when state is neutral (always at least OCEAN)", async () => {
       registerEmotionCli({ program, getManager });
       await run("emotion", "context");
-      expect(output.join("\n")).toContain("no emotion context");
+      const text = output.join("\n");
+      expect(text).toContain("<emotion_state>");
+      expect(text).toContain("<personality>");
+      expect(text).toContain("openness:");
     });
 
     it("outputs emotion block after stimulus", async () => {

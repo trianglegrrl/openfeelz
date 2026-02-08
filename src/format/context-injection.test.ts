@@ -89,10 +89,15 @@ describe("context injection lifecycle", () => {
       expect(block).toMatch(/^<emotion_state>/);
       expect(block).toMatch(/<\/emotion_state>$/);
 
-      // Must contain dimension deviations
+      // Must contain personality (always present)
+      expect(block).toContain("<personality>");
+      expect(block).toContain("openness:");
+
+      // Must contain dimension deviations with baseline
       expect(block).toContain("<dimensions>");
       expect(block).toContain("pleasure: elevated");
       expect(block).toContain("curiosity: elevated");
+      expect(block).toContain("baseline:");
       expect(block).toContain("</dimensions>");
 
       // Must contain user section with natural-language entries
@@ -172,7 +177,7 @@ describe("context injection lifecycle", () => {
       expect(block).toContain("</others>");
     });
 
-    it("returns empty string when there is nothing to inject", () => {
+    it("returns block with at least personality when no stimuli (never empty)", () => {
       const state = buildEmptyState();
       const block = formatEmotionBlock(state, "nobody", "main", {
         maxUserEntries: 3,
@@ -180,7 +185,11 @@ describe("context injection lifecycle", () => {
         halfLifeHours: 12,
         trendWindowHours: 24,
       });
-      expect(block).toBe("");
+      expect(block).not.toBe("");
+      expect(block).toContain("<emotion_state>");
+      expect(block).toContain("<personality>");
+      expect(block).not.toContain("<user>");
+      expect(block).not.toContain("<agent>");
     });
   });
 
