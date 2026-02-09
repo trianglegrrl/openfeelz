@@ -58,3 +58,57 @@ export async function backupOpenClawConfigOnce(
   if (result != null) backupOnceDone = true;
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// Config write (no shell / child_process - direct JSON read/write)
+// ---------------------------------------------------------------------------
+
+/**
+ * Set a single OpenFeelz plugin config value by reading and writing openclaw.json.
+ * Backs up first (once per process). No shell or child_process used.
+ * @returns true if write succeeded, false on error or missing config path.
+ */
+export async function setOpenClawPluginConfig(
+  pathKey: string,
+  value: unknown,
+  configPath?: string,
+): Promise<boolean> {
+  const configFilePath = configPath ?? getConfigPath();
+  await backupOpenClawConfigOnce(configFilePath);
+
+  let config: Record<string, unknown>;
+  try {
+    const raw = await fs.readFile(configFilePath, "utf8");
+    config = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    config = { plugins: { entries: {} } };
+  }
+
+  if (!config.plugins || typeof config.plugins !== "object") {
+    config.plugins = { entries: {} };
+  }
+  const entries = config.plugins as Record<string, unknown>;
+  if (!entries.entries || typeof entries.entries !== "object") {
+    entries.entries = {};
+  }
+  const pluginsEntries = entries.entries as Record<string, unknown>;
+  if (!pluginsEntries.openfeelz || typeof pluginsEntries.openfeelz !== "object") {
+    pluginsEntries.openfeelz = { config: {} };
+  }
+  const openfeelz = pluginsEntries.openfeelz as Record<string, unknown>;
+  if (!openfeelz.config || typeof openfeelz.config !== "object") {
+    openfeelz.config = {};
+  }
+  (openfeelz.config as Record<string, unknown>)[pathKey] = value;
+
+  try {
+    const dir = path.dirname(configFilePath);
+    await fs.mkdir(dir, { recursive: true });
+    const tmpPath = `${configFilePath}.openfeelz.${process.pid}.${Date.now()}.json`;
+    await fs.writeFile(tmpPath, JSON.stringify(config, null, 2), "utf8");
+    await fs.rename(tmpPath, configFilePath);
+    return true;
+  } catch {
+    return false;
+  }
+}

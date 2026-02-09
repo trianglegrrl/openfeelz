@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import os from "node:os";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Command } from "commander";
 import { registerEmotionCli } from "./cli.js";
@@ -178,6 +179,23 @@ describe("cli", () => {
       await expect(run("emotion", "decay")).rejects.toThrow(
         /Provide a preset \(fast or slow\) or both --dimension and --rate/,
       );
+    });
+  });
+
+  describe("security: no shell execution", () => {
+    it("CLI and wizard do not use child_process or spawn (plugin scanner safety)", async () => {
+      const cliDir = path.dirname(fileURLToPath(import.meta.url));
+      const cliContent = await fs.readFile(path.join(cliDir, "cli.ts"), "utf8");
+      const wizardContent = await fs.readFile(
+        path.join(cliDir, "configure-wizard.ts"),
+        "utf8",
+      );
+      expect(cliContent).not.toMatch(/require\s*\(\s*["']child_process["']\s*\)/);
+      expect(cliContent).not.toMatch(/from\s+["']node:child_process["']/);
+      expect(cliContent).not.toMatch(/\bspawn\s*\(/);
+      expect(wizardContent).not.toMatch(/require\s*\(\s*["']child_process["']\s*\)/);
+      expect(wizardContent).not.toMatch(/from\s+["']node:child_process["']/);
+      expect(wizardContent).not.toMatch(/\bspawn\s*\(/);
     });
   });
 });

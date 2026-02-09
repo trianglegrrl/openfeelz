@@ -14,9 +14,8 @@
  */
 
 import { createRequire } from "node:module";
-import { spawn } from "node:child_process";
 import type { Command } from "commander";
-import { backupOpenClawConfigOnce } from "./backup-openclaw-config.js";
+import { backupOpenClawConfigOnce, setOpenClawPluginConfig } from "./backup-openclaw-config.js";
 import type { OCEANTrait, DimensionName } from "../types.js";
 
 // Resolve version from package.json. In source (src/cli/) it's 2 levels up;
@@ -47,7 +46,7 @@ interface CliParams {
   config?: Partial<EmotionEngineConfig>;
   workspaceDir?: string;
   openclawConfig?: unknown;
-  /** When set, decay preset (fast/slow) uses this instead of spawning openclaw (for tests). */
+  /** When set, decay preset (fast/slow) uses this instead of writing config (for tests). */
   setPluginConfig?: (path: string, value: unknown) => void | Promise<void>;
 }
 
@@ -311,17 +310,10 @@ export function registerEmotionCli({
           if (backupPath) {
             console.log(`[openfeelz] Backed up config to ${backupPath}`);
           }
-          const valStr = JSON.stringify(preset);
-          const child = spawn("openclaw", [
-            "config",
-            "set",
-            "plugins.entries.openfeelz.config.decayPreset",
-            valStr,
-          ], { stdio: "inherit", shell: true });
-          await new Promise<void>((resolve, reject) => {
-            child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`config set exited ${code}`))));
-            child.on("error", reject);
-          });
+          const ok = await setOpenClawPluginConfig("decayPreset", preset);
+          if (!ok) {
+            this.error("Failed to write config. Check OPENCLAW_CONFIG or ~/.openclaw/openclaw.json.");
+          }
         }
         console.log(`Decay preset set to ${preset}.`);
         return;

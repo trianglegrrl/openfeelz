@@ -3,12 +3,11 @@
  * Uses @clack/prompts; run via `openclaw emotion wizard`.
  */
 
-import { spawn } from "node:child_process";
 import type { PersonalityPreset } from "../config/personality-presets.js";
 import type { StateManager } from "../state/state-manager.js";
 import type { EmotionEngineConfig } from "../types.js";
 import { DEFAULT_CONFIG } from "../types.js";
-import { backupOpenClawConfigOnce } from "./backup-openclaw-config.js";
+import { backupOpenClawConfigOnce, setOpenClawPluginConfig } from "./backup-openclaw-config.js";
 import { validateConfigNumber } from "./configure-validation.js";
 
 export interface ConfigureWizardContext {
@@ -19,20 +18,12 @@ export interface ConfigureWizardContext {
   workspaceDir?: string;
 }
 
-async function runOpenClawConfigSet(path: string, value: string | number | boolean): Promise<boolean> {
+async function runOpenClawConfigSet(pathKey: string, value: string | number | boolean): Promise<boolean> {
   const backupPath = await backupOpenClawConfigOnce();
   if (backupPath) {
     console.log(`[openfeelz] Backed up config to ${backupPath}`);
   }
-  return new Promise((resolve) => {
-    const valStr = typeof value === "string" ? value : JSON.stringify(value);
-    const child = spawn("openclaw", ["config", "set", `plugins.entries.openfeelz.config.${path}`, valStr], {
-      stdio: "inherit",
-      shell: true,
-    });
-    child.on("close", (code) => resolve(code === 0));
-    child.on("error", () => resolve(false));
-  });
+  return setOpenClawPluginConfig(pathKey, value);
 }
 
 /**
